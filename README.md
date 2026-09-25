@@ -18,13 +18,13 @@ Projet Python pour la data science (ENSAE).
 
 ```
 ├── main.ipynb              # Notebook FINAL : raconte l'analyse, appelle les fonctions de src/
-├── src/                    # Code réutilisable (fonctions uniquement)
-│   ├── hubeau.py           #   API Hub'Eau (cours d'eau, nappes)
-│   ├── pesticides.py       #   ventes de pesticides (BNV-D)
-│   ├── agriculture.py      #   parcelles / surfaces agricoles (RPG)
-│   ├── geo.py              #   geopandas : CRS, jointures spatiales
-│   ├── nettoyage.py        #   nettoyage, agrégation, fusion
-│   └── visualisation.py    #   graphiques et cartes
+├── src/                    # Code réutilisable : un fichier = une fonction
+│   ├── hubeau/             #   API Hub'Eau (cours d'eau, nappes)
+│   ├── pesticides/         #   ventes de pesticides (BNV-D)
+│   ├── agriculture/        #   parcelles / surfaces agricoles (RPG)
+│   ├── geo/                #   geopandas : CRS, jointures spatiales
+│   ├── nettoyage/          #   nettoyage, agrégation, fusion
+│   └── visualisation/      #   graphiques et cartes
 ├── notebooks/exploration/  # Brouillons perso (un par personne / sujet)
 ├── data/                   # Non versionné (voir .gitignore)
 │   ├── raw/                #   données brutes téléchargées
@@ -45,7 +45,8 @@ pip install -r requirements.txt
 ## Règles de travail en groupe
 
 - **Notebooks d'exploration** : nommés `initiales_sujet.ipynb` (ex. `rc_hubeau_stations.ipynb`). Chacun ne modifie que les siens, ce qui évite les conflits git sur les notebooks.
-- **Quand un bout de code marche**, il passe dans une fonction de `src/`, puis il est appelé depuis `main.ipynb`.
+- **Un fichier = une fonction** : quand un bout de code marche, il devient une fonction dans son propre fichier, nommé comme elle, dans le bon dossier de `src/`. Exemple : la fonction `recuperer_stations` va dans `src/hubeau/recuperer_stations.py` et s'importe avec `from src.hubeau.recuperer_stations import recuperer_stations`.
+- Lancer Jupyter depuis la racine du dépôt pour que les imports `src...` fonctionnent.
 - **`main.ipynb`** : une seule personne l'édite à la fois (prévenez le groupe).
 - **Branches** : une branche par tâche (ex. `hubeau-pagination`), puis une pull request vers `main`.
 - **Données** : jamais commitées. Tout doit pouvoir être re-téléchargé par le code.
