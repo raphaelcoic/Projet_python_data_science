@@ -26,10 +26,12 @@ Projet Python pour la data science (ENSAE).
 │   ├── nettoyage/          #   nettoyage, agrégation, fusion
 │   └── visualisation/      #   graphiques et cartes
 ├── notebooks/exploration/  # Brouillons perso (un par personne / sujet)
-├── data/                   # Non versionné (voir .gitignore)
-│   ├── raw/                #   données brutes téléchargées
-│   ├── processed/          #   données nettoyées
-│   └── geo/                #   shapefiles / fonds de carte
+├── data/
+│   ├── reference/          #   petites tables de référence (versionnées) : molecules.csv
+│   ├── raw/                #   données brutes téléchargées (non versionné)
+│   ├── processed/          #   livrables du contrat de données (non versionné)
+│   └── geo/                #   shapefiles / fonds de carte (non versionné)
+├── docs/contrat_donnees.md # Format des livrables de chaque partie
 ├── output/figures/         # Figures exportées
 └── requirements.txt
 ```
@@ -54,8 +56,13 @@ pip install -r requirements.txt
 
 ## Répartition
 
-| Membre | Partie |
-|---|---|
-| _…_ | Hub'Eau (cours d'eau + nappes) |
-| _…_ | Pesticides + agriculture |
-| _…_ | Géographie + visualisations |
+| Étape | Membre A — Eau | Membre B — Champs | Membre C — Pesticides |
+|---|---|---|---|
+| Nom | _…_ | _…_ | _…_ |
+| 1. Collecte (en parallèle) | `src/hubeau/` → `eau.parquet` | `src/agriculture/` → `champs.parquet` | `src/pesticides/` → `pesticides.parquet` |
+| 2. Jointure (une personne) | `src/nettoyage/` → `base_finale.parquet` | | |
+| 3. Stats descriptives (en parallèle) | qualité de l'eau | surfaces et cultures | ventes de pesticides |
+
+Le croisement eau × champs × pesticides se fait à trois, puis une seule personne assemble `main.ipynb`.
+
+**Avant de coder, lire [`docs/contrat_donnees.md`](docs/contrat_donnees.md)** : maille, colonnes et types de chaque livrable.
