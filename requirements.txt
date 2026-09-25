@@ -1,0 +1,6 @@
+pandas
+requests
+geopandas
+matplotlib
+pyarrow
+jupyter

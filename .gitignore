@@ -1,0 +1,21 @@
+# Données : trop lourdes pour git, chacun les régénère avec le code
+data/raw/*
+data/processed/*
+data/geo/*
+!data/**/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Systèmes
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
