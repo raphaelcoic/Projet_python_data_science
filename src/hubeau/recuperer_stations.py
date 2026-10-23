@@ -4,7 +4,7 @@ import pandas as pd
 URL = "https://hubeau.eaufrance.fr/api/v2/qualite_rivieres/station_pc"
 FIELDS = (
     "code_station,libelle_station,code_departement,"
-    "code_cours_eau"
+    "code_cours_eau,"
     "longitude,latitude,date_creation,date_arret"
 )
 TAILLE_MAX = 20000  # taille de page maximale de l'API (le plus gros département, l'Isère, a 954 stations)
