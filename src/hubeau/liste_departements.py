@@ -4,7 +4,8 @@ def liste_departements():
         if i <= 9:
             L.append(f"0{i}")
         elif i == 20:
-            L.append("2A", "2B")
+            L.append("2A")
+            L.append("2B")
         else:
             L.append(f"{i}")
     return L
