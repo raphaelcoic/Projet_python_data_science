@@ -1,24 +1,15 @@
-SEUIL_UGL = 0.1  # norme eau potable par pesticide, en µg/L
-CLE = ["code_dep", "annee", "milieu", "code_sandre"]
+CLE = ["code_dep", "annee", "indice"]
 
 
-def agreger_eau(analyses):
-    """Agrège les analyses nettoyées au département × année × milieu × molécule.
+def agreger_eau(indices):
+    """Agrège les indices biologiques nettoyés au département × année × indice.
 
-    analyses : DataFrame renvoyé par nettoyer_analyses.
-    Renvoie un DataFrame avec les colonnes de eau.parquet (voir docs/contrat_donnees.md).
+    indices : DataFrame renvoyé par nettoyer_indices.
+    Renvoie un DataFrame avec les colonnes de eau.parquet.
     """
-    analyses = analyses.assign(depassement=analyses["concentration_ugl"] > SEUIL_UGL)
-    eau = analyses.groupby(CLE, as_index=False).agg(
+    return indices.groupby(CLE, as_index=False).agg(
         nb_stations=("code_station", "nunique"),
-        nb_analyses=("code_station", "size"),
-        nb_quantifications=("quantifie", "sum"),
-        concentration_moyenne_ugl=("concentration_ugl", "mean"),
-        concentration_max_ugl=("concentration_ugl", "max"),
-        nb_depassements=("depassement", "sum"),
+        nb_prelevements=("valeur", "size"),
+        valeur_moyenne=("valeur", "mean"),
+        valeur_mediane=("valeur", "median"),
     )
-    eau["taux_quantification"] = eau["nb_quantifications"] / eau["nb_analyses"]
-    return eau[
-        CLE + ["nb_stations", "nb_analyses", "nb_quantifications", "taux_quantification",
-               "concentration_moyenne_ugl", "concentration_max_ugl", "nb_depassements"]
-    ]
