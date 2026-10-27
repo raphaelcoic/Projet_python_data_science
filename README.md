@@ -71,7 +71,7 @@ pip install -r requirements.txt
 | Nom | _…_ | _…_ | _…_ |
 | 1. Collecte (en parallèle) | `src/hubeau/` → `eau.parquet` | `src/agriculture/` → `champs.parquet` | `src/pesticides/` → `pesticides.parquet` |
 | 2. Jointure (une personne) | `src/nettoyage/` → `base_finale.parquet` | | |
-| 3. Stats descriptives (en parallèle) | qualité de l'eau | surfaces et cultures | ventes de pesticides |
+| 3. Stats descriptives (en parallèle) | qualité de l'eau | surfaces et cultures | achats de pesticides |
 
 Le croisement eau × champs × pesticides se fait à trois, puis une seule personne assemble `main.ipynb`.
 
