@@ -10,173 +10,41 @@ Variables retenues pour le projet (`COLONNES_PROJET_RPG`) :
     code_culture, libelle_culture, code_groupe, libelle_groupe,
     bio, geometry
 
-Source : https://www.data.gouv.fr/datasets/rpg (IGN / ASP)
-
 Exemple
 -------
->>> from src.acquisition.get_parcelles_rpg import get_parcelles_rpg
->>> gdf_2023 = get_parcelles_rpg(departements=["90"], annee=2023)
->>> gdf_2013 = get_parcelles_rpg(departements=["90"], annee=2013)
+>>> from src.agriculture.recuperer_parcelles_rpg import recuperer_parcelles_rpg
+>>> gdf_2023 = recuperer_parcelles_rpg(departements=["90"], annee=2023)
 """
 
 from __future__ import annotations
 
-import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
-from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
-import requests
 import shapely
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
-WFS_URL = "https://data.geopf.fr/wfs/ows"
-PAGE_SIZE = 5000  # maximum imposé par le serveur WFS de la Géoplateforme
-
-# Couches départementales ADMIN-EXPRESS (même service WFS)
-COUCHE_DEP_FILTRE = "ADMINEXPRESS-COG-CARTO-PE.LATEST:departement"  # très simplifiée -> filtre serveur
-COUCHE_DEP_ATTRIB = "ADMINEXPRESS-COG-CARTO.LATEST:departement"  # plus précise -> attribution du département
-
-# Chemin du cache local des contours départementaux (conservé à la racine de data/processed/rpg)
-CHEMIN_CACHE_CONTOURS_DEP = Path("data/processed/rpg/_contours_departements.parquet")
-
-# Les 13 variables strictement retenues pour le projet
-COLONNES_PROJET_RPG: list[str] = [
-    "id_parcelle",
-    "annee",
-    "code_dep",
-    "nom_dep",
-    "surface_ha",
-    "categorie_culture",
-    "libelle_categorie",
-    "code_culture",
-    "libelle_culture",
-    "code_groupe",
-    "libelle_groupe",
-    "bio",
-    "geometry",
-]
-
-# Libellés des grandes catégories de culture (champ cat_cult_p)
-CATEGORIES_CULTURE: dict[str, str] = {
-    "TA": "Terres arables",
-    "PP": "Prairies permanentes",
-    "CP": "Cultures permanentes",
-    "SB": "Surfaces boisées",
-}
-
-# Référentiel harmonisé des 28 groupes de cultures du RPG (utilisé notamment pour 2013 et en secours)
-LIBELLES_GROUPES_RPG: dict[str, str] = {
-    "1": "Blé tendre",
-    "2": "Maïs grain et ensilage",
-    "3": "Orge",
-    "4": "Autres céréales",
-    "5": "Colza",
-    "6": "Tournesol",
-    "7": "Autres oléagineux",
-    "8": "Protéagineux",
-    "9": "Plantes à fibres",
-    "10": "Semences",
-    "11": "Gel (surfaces gelées sans production)",
-    "12": "Gel industriel",
-    "13": "Autres gels",
-    "14": "Riz",
-    "15": "Légumineuses à grains",
-    "16": "Fourrage",
-    "17": "Estives et landes",
-    "18": "Prairies permanentes",
-    "19": "Prairies temporaires",
-    "20": "Vergers",
-    "21": "Vignes",
-    "22": "Fruits à coque",
-    "23": "Oliviers",
-    "24": "Autres cultures industrielles",
-    "25": "Légumes ou fleurs",
-    "26": "Canne à sucre",
-    "27": "Arboriculture",
-    "28": "Divers",
-}
-
-# Correspondance Groupe de cultures -> Grande catégorie de culture (TA, PP, CP, NA)
-GROUPE_VERS_CATEGORIE: dict[str, str] = {
-    "1": "TA", "2": "TA", "3": "TA", "4": "TA", "5": "TA",
-    "6": "TA", "7": "TA", "8": "TA", "9": "TA", "10": "TA",
-    "11": "TA", "12": "TA", "13": "TA", "14": "TA", "15": "TA",
-    "16": "TA", "17": "PP", "18": "PP", "19": "TA",
-    "20": "CP", "21": "CP", "22": "CP", "23": "CP",
-    "24": "TA", "25": "TA", "26": "CP", "27": "CP", "28": "NA",
-}
-
-# Correspondance exacte Code culture (3 lettres) -> Grande catégorie de culture (issue du RPG 2025 + PAC)
-CULTURE_VERS_CATEGORIE: dict[str, str] = {
-    "AAR": "TA", "ACA": "TA", "ACP": "CP", "AFG": "TA", "AGR": "CP", "AIL": "TA",
-    "AME": "TA", "ANA": "TA", "ARA": "TA", "ARP": "CP", "ART": "TA", "AVH": "TA",
-    "AVO": "CP", "AVP": "TA", "BCA": "CP", "BCF": "CP", "BCI": "CP", "BCP": "CP",
-    "BCR": "CP", "BDH": "TA", "BDP": "TA", "BDT": "TA", "BEA": "CP", "BEF": "CP",
-    "BEI": "CP", "BEP": "CP", "BER": "CP", "BFP": "TA", "BFS": "NA", "BOR": "NA",
-    "BOP": "PP", "BTA": "NA", "BTH": "TA", "BTN": "TA", "BTP": "TA", "BVF": "TA",
-    "CAB": "CP", "CAC": "CP", "CAE": "PP", "CAF": "TA", "CAG": "TA", "CAH": "TA",
-    "CAR": "TA", "CBT": "CP", "CCN": "TA", "CEE": "PP", "CEL": "TA", "CHU": "TA",
-    "CHV": "TA", "CML": "TA", "CPL": "TA", "CSA": "CP", "CSF": "CP", "CSI": "CP",
-    "CSP": "CP", "CSR": "CP", "CSS": "NA", "CTG": "CP", "CZH": "TA", "CZP": "TA",
-    "EPE": "TA", "EPI": "TA", "FEV": "TA", "FLA": "TA", "FLP": "CP", "FNU": "TA",
-    "FRA": "TA", "FVL": "TA", "FVP": "TA", "GES": "TA", "GRA": "TA", "HBL": "CP",
-    "HPC": "TA", "J5M": "TA", "J6P": "TA", "J6S": "TA", "JAC": "TA", "JNO": "TA",
-    "LAV": "CP", "LBF": "TA", "LDH": "TA", "LDP": "TA", "LEC": "TA", "LIF": "TA",
-    "LIH": "TA", "LIP": "TA", "LOT": "TA", "LUZ": "TA", "MCR": "TA", "MCS": "TA",
-    "MCT": "CP", "MDI": "TA", "MID": "TA", "MIE": "TA", "MIS": "TA", "MLC": "TA",
-    "MLF": "TA", "MLG": "TA", "MLO": "TA", "MLS": "TA", "MLT": "TA", "MOH": "TA",
-    "MOT": "TA", "MPA": "TA", "MPC": "TA", "MRS": "NA", "MSW": "CP", "NOS": "CP",
-    "NOX": "CP", "NVT": "TA", "NYG": "TA", "OAG": "TA", "OEI": "TA", "OHR": "TA",
-    "OIG": "TA", "OLI": "CP", "ORH": "TA", "ORP": "TA", "PAG": "TA", "PCH": "TA",
-    "PCL": "TA", "PEP": "CP", "PEV": "CP", "PFR": "CP", "PHF": "TA", "PHI": "TA",
-    "PHS": "TA", "PIS": "CP", "PME": "CP", "POR": "TA", "POT": "TA", "PPH": "PP",
-    "PPP": "CP", "PPR": "TA", "PRF": "CP", "PRL": "PP", "PRU": "CP", "PSL": "TA",
-    "PTC": "TA", "PTR": "TA", "PVP": "TA", "PVT": "CP", "PWT": "CP", "RDI": "TA",
-    "RGA": "TA", "RIZ": "TA", "ROS": "CP", "RVI": "CP", "SAG": "NA", "SAI": "TA",
-    "SBO": "SB", "SGH": "TA", "SGP": "TA", "SHD": "CP", "SIN": "NA", "SNA": "NA",
-    "SNE": "NA", "SNU": "NA", "SOG": "TA", "SOJ": "TA", "SPH": "PP", "SPL": "PP",
-    "SRS": "TA", "TAB": "TA", "TBT": "TA", "TCR": "CP", "TOM": "TA", "TRE": "TA",
-    "TRN": "TA", "TRU": "CP", "TTH": "TA", "TTP": "TA", "VES": "TA", "VET": "CP",
-    "VGD": "CP", "VNL": "CP", "VRC": "CP", "VRG": "CP", "VRN": "CP", "VRT": "CP",
-    "ZZZ": "NA",
-}
-
-# Seule l'édition 2025 (RPG v4) du WFS contient le label bio au niveau de la parcelle.
-ANNEES_AVEC_BIO = {2025}
-
-# Départements d'Outre-Mer (DROM)
-DEPARTEMENTS_OUTRE_MER = {"971", "972", "973", "974", "976"}
+from src.agriculture.constantes_rpg import (
+    ANNEES_AVEC_BIO,
+    CATEGORIES_CULTURE,
+    COLONNES_PROJET_RPG,
+    COUCHE_DEP_ATTRIB,
+    COUCHE_DEP_FILTRE,
+    CULTURE_VERS_CATEGORIE,
+    GROUPE_VERS_CATEGORIE,
+    LIBELLES_GROUPES_RPG,
+    PAGE_SIZE,
+)
+from src.agriculture.recuperer_departements_ign import recuperer_departements_ign
+from src.agriculture.requete_wfs import requete_wfs
+from src.agriculture.schema_couche_wfs import schema_couche_wfs
 
 
 # --------------------------------------------------------------------------- #
-# Outils HTTP / WFS
+# Couches et pagination WFS
 # --------------------------------------------------------------------------- #
-@lru_cache(maxsize=1)
-def _session() -> requests.Session:
-    """Session HTTP avec relance automatique (erreurs 429 / 5xx, coupures réseau)."""
-    s = requests.Session()
-    retry = Retry(
-        total=6,
-        backoff_factor=2,
-        status_forcelist=(429, 500, 502, 503, 504),
-        allowed_methods=("GET",),
-    )
-    s.mount("https://", HTTPAdapter(max_retries=retry, pool_maxsize=32))
-    return s
-
-
-def _wfs(params: dict, timeout: int = 180) -> requests.Response:
-    base = {"SERVICE": "WFS", "VERSION": "2.0.0"}
-    r = _session().get(WFS_URL, params={**base, **params}, timeout=timeout)
-    r.raise_for_status()
-    return r
-
-
 def _couche_parcelles(annee: int) -> str:
     if annee == 2025:
         return "LANDUSE.AGRICULTURE2025:parcelles_graphiques"
@@ -194,19 +62,6 @@ def _couche_codes_cultures(annee: int) -> str:
         return f"RPG.{annee}:codes_cultures"
     # Pas de table de codes publiée en WFS avant 2022 : on prend 2023 (la plus complète avec 372 codes)
     return "RPG.2023:codes_cultures"
-
-
-@lru_cache(maxsize=None)
-def _schema(couche: str) -> tuple[str, tuple[str, ...]]:
-    """Retourne (nom du champ géométrie, noms des champs attributaires) d'une couche."""
-    xsd = _wfs({"REQUEST": "DescribeFeatureType", "TYPENAMES": couche}).text
-    elements = re.findall(r'<xsd:element[^>]*name="([^"]+)"[^>]*type="([^"]+)"', xsd)
-    geom = next(n for n, t in elements if t.startswith("gml:"))
-    champs = tuple(
-        n for n, t in elements
-        if not t.startswith("gml:") and ":" in t and n != couche.split(":")[1]
-    )
-    return geom, champs
 
 
 def _proprietes_wfs_utiles(annee: int, geom_champ: str, champs: tuple[str, ...]) -> str:
@@ -244,52 +99,16 @@ def _page_avec_total(
     }
     if propertyname:
         params["PROPERTYNAME"] = propertyname
-    r = _wfs(params)
-    js = r.json()
+    js = requete_wfs(params).json()
     return int(js.get("numberMatched") or 0), js["features"]
 
 
 # --------------------------------------------------------------------------- #
-# Référentiels (départements, codes cultures) — récupérés une fois par session
+# Libellés des cultures — récupérés une fois par session
 # --------------------------------------------------------------------------- #
 @lru_cache(maxsize=None)
-def _departements(couche: str) -> gpd.GeoDataFrame:
-    if CHEMIN_CACHE_CONTOURS_DEP.exists():
-        try:
-            gdf_cache = gpd.read_parquet(CHEMIN_CACHE_CONTOURS_DEP)
-            _ = gdf_cache.sindex
-            return gdf_cache
-        except Exception:
-            pass
-
-    geom_champ, _ = _schema(couche)
-    r = _wfs(
-        {
-            "REQUEST": "GetFeature",
-            "TYPENAMES": couche,
-            "OUTPUTFORMAT": "application/json",
-            "PROPERTYNAME": f"code_insee,nom_officiel,{geom_champ}",
-            "COUNT": 200,
-        },
-        timeout=300,
-    )
-    gdf = gpd.GeoDataFrame.from_features(r.json()["features"], crs=4326)
-    gdf = gdf.rename(columns={"code_insee": "code_dep", "nom_officiel": "nom_dep"})[
-        ["code_dep", "nom_dep", "geometry"]
-    ]
-    if couche == COUCHE_DEP_ATTRIB:
-        try:
-            CHEMIN_CACHE_CONTOURS_DEP.parent.mkdir(parents=True, exist_ok=True)
-            gdf.to_parquet(CHEMIN_CACHE_CONTOURS_DEP, index=False)
-        except Exception:
-            pass
-    _ = gdf.sindex  # pré-construit l'index spatial une seule fois
-    return gdf
-
-
-@lru_cache(maxsize=None)
 def _table_codes(couche: str) -> pd.DataFrame:
-    r = _wfs({"REQUEST": "GetFeature", "TYPENAMES": couche, "OUTPUTFORMAT": "application/json"})
+    r = requete_wfs({"REQUEST": "GetFeature", "TYPENAMES": couche, "OUTPUTFORMAT": "application/json"})
     df = pd.DataFrame([f["properties"] for f in r.json()["features"]])
     df.columns = [c.lower() for c in df.columns]
     return df.rename(
@@ -320,7 +139,7 @@ def _tuiles_bbox(code_dep: str, geom_champ: str, pas: float = 0.45) -> list[str]
     Découpe l'emprise du département en une grille de boîtes englobantes (BBOX)
     ajustées au polygone du département.
     """
-    deps = _departements(COUCHE_DEP_FILTRE)
+    deps = recuperer_departements_ign(COUCHE_DEP_FILTRE)
     sel = deps.loc[deps["code_dep"] == code_dep, "geometry"]
     if sel.empty:
         raise ValueError(f"Département inconnu : {code_dep!r}")
@@ -359,7 +178,7 @@ def _parcelles_departement(
     verbose: bool,
 ) -> gpd.GeoDataFrame:
     couche = _couche_parcelles(annee)
-    geom_champ, champs = _schema(couche)
+    geom_champ, champs = schema_couche_wfs(couche)
     if "id_parcel" in champs:
         tri = "id_parcel"
     elif {"num_ilot", "num_parcel"} <= set(champs):
@@ -418,7 +237,7 @@ def _parcelles_departement(
     gdf = gpd.GeoDataFrame.from_features(list(uniques.values()), crs=4326)
 
     # Attribution du département : point intérieur de la parcelle dans le contour ADMIN-EXPRESS.
-    deps = _departements(COUCHE_DEP_ATTRIB)
+    deps = recuperer_departements_ign(COUCHE_DEP_ATTRIB)
     pts = gpd.GeoDataFrame(geometry=gdf.geometry.representative_point(), crs=4326)
     joint = gpd.sjoin(pts, deps[["code_dep", "geometry"]], how="left", predicate="within")
     joint = joint[~joint.index.duplicated(keep="first")]
@@ -539,7 +358,7 @@ def _mise_en_forme(gdf: gpd.GeoDataFrame, annee: int, avec_libelles: bool) -> gp
         gdf["bio"] = gdf["bio"].astype("boolean")
 
     gdf["annee"] = int(annee)
-    deps = _departements(COUCHE_DEP_ATTRIB)[["code_dep", "nom_dep"]]
+    deps = recuperer_departements_ign(COUCHE_DEP_ATTRIB)[["code_dep", "nom_dep"]]
     gdf = gdf.merge(deps, on="code_dep", how="left")
 
     for col in COLONNES_PROJET_RPG:
@@ -552,7 +371,7 @@ def _mise_en_forme(gdf: gpd.GeoDataFrame, annee: int, avec_libelles: bool) -> gp
 # --------------------------------------------------------------------------- #
 # Fonction publique
 # --------------------------------------------------------------------------- #
-def get_parcelles_rpg(
+def recuperer_parcelles_rpg(
     departements: list[str] | str | None = None,
     annee: int = 2025,
     bio_uniquement: bool = False,
@@ -579,7 +398,7 @@ def get_parcelles_rpg(
     avec_libelles : bool
         Ajoute les libellés des cultures et des groupes de cultures.
     max_workers : int
-        Nombre de requêtes WFS simultanées (8 par défaut).
+        Nombre de requêtes WFS simultanées (12 par défaut).
     verbose : bool
         Affiche l'avancement.
 
@@ -595,7 +414,7 @@ def get_parcelles_rpg(
         raise ValueError(f"Le label bio n'est disponible via l'API que pour : {sorted(ANNEES_AVEC_BIO)}")
 
     if departements is None:
-        departements = sorted(_departements(COUCHE_DEP_FILTRE)["code_dep"])
+        departements = sorted(recuperer_departements_ign(COUCHE_DEP_FILTRE)["code_dep"])
     elif isinstance(departements, str):
         departements = [departements]
     departements = [str(d).zfill(2) for d in departements]
