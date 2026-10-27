@@ -8,28 +8,29 @@ Projet Python pour la data science (ENSAE).
 
 | Données | Source |
 |---|---|
-| Qualité des cours d'eau | [Hub'Eau – Qualité des cours d'eau](https://hubeau.eaufrance.fr/page/api-qualite-cours-deau) |
-| Qualité des nappes | [Hub'Eau – Qualité des nappes](https://hubeau.eaufrance.fr/page/api-qualite-nappes) |
-| Ventes de pesticides | BNV-D (data.gouv.fr) |
-| Parcelles agricoles | RPG (IGN) |
-| Fonds de carte | ADMIN-EXPRESS (IGN) / cartiflette |
+| Indices biologiques des cours d'eau (I2M2, IBD, IPR) | [Hub'Eau – Hydrobiologie](https://hubeau.eaufrance.fr/page/api-hydrobiologie) |
+| Stations de mesure des cours d'eau | [Hub'Eau – Qualité des cours d'eau](https://hubeau.eaufrance.fr/page/api-qualite-cours-deau) |
+| Achats de produits phytosanitaires par département | CSV data.gouv.fr (lien exact à ajouter) |
+| Parcelles agricoles | [RPG](https://www.data.gouv.fr/datasets/rpg) (IGN / ASP), via le WFS de la Géoplateforme |
+| Fonds de carte | [france-geojson](https://github.com/gregoiredavid/france-geojson), ADMIN-EXPRESS (IGN) |
 
 ## Organisation du dépôt
 
 ```
 ├── main.ipynb              # Notebook FINAL : raconte l'analyse, appelle les fonctions de src/
 ├── src/                    # Code réutilisable : un fichier = une fonction
-│   ├── hubeau/             #   API Hub'Eau (cours d'eau, nappes)
-│   ├── pesticides/         #   ventes de pesticides (BNV-D)
-│   ├── agriculture/        #   parcelles / surfaces agricoles (RPG)
+│   ├── hubeau/             #   API Hub'Eau (stations, indices biologiques)
+│   ├── pesticides/         #   achats de pesticides
+│   ├── agriculture/        #   parcelles agricoles du RPG (WFS IGN) ; constantes_rpg.py = référentiels
 │   ├── geo/                #   geopandas : CRS, jointures spatiales
 │   ├── nettoyage/          #   nettoyage, agrégation, fusion
 │   └── visualisation/      #   graphiques et cartes
-├── notebooks/exploration/  # Brouillons perso (un par personne / sujet)
+├── notebooks/
+│   ├── README.md           #   index des notebooks (qui, quoi)
+│   └── exploration/        #   brouillons perso (un par personne / sujet)
 ├── data/
-│   ├── reference/          #   petites tables de référence (versionnées) : molecules.csv
 │   ├── raw/                #   données brutes téléchargées (non versionné)
-│   ├── processed/          #   livrables du contrat de données (non versionné)
+│   ├── processed/          #   livrables du contrat de données, et rpg/ (non versionné)
 │   └── geo/                #   shapefiles / fonds de carte (non versionné)
 ├── docs/contrat_donnees.md # Format des livrables de chaque partie
 ├── output/figures/         # Figures exportées
@@ -44,11 +45,20 @@ Projet Python pour la data science (ENSAE).
 pip install -r requirements.txt
 ```
 
+## Régénérer les données
+
+| Partie | Commande | Produit |
+|---|---|---|
+| Eau | exécuter les parties 1 et 2 de `main.ipynb` | `data/raw/*.parquet`, `data/processed/eau.parquet` |
+| Champs | `python -m src.agriculture.sauvegarder_parcelles_rpg` (plusieurs heures, reprend où il s'est arrêté) | `data/processed/rpg/rpg2013/`, `rpg2023/` |
+| | `python -m src.agriculture.fusionner_tous_millesimes_rpg` | `data/processed/rpg/rpg_{annee}_national.parquet` |
+| Pesticides | télécharger le CSV dans `data/raw/` | |
+
 ## Règles de travail en groupe
 
 - **Notebooks d'exploration** : tous dans `notebooks/exploration/`, nommés `initiales_sujet.ipynb` (ex. `rc_hubeau_stations.ipynb`), et listés dans `notebooks/README.md`. Chacun ne modifie que les siens, ce qui évite les conflits git sur les notebooks.
 - **Un fichier = une fonction** : quand un bout de code marche, il devient une fonction dans son propre fichier, nommé comme elle, dans le bon dossier de `src/`. Exemple : la fonction `recuperer_stations` va dans `src/hubeau/recuperer_stations.py` et s'importe avec `from src.hubeau.recuperer_stations import recuperer_stations`.
-- Lancer Jupyter depuis la racine du dépôt pour que les imports `src...` fonctionnent.
+- **Chemins** : le code utilise des chemins relatifs à la racine du dépôt (`data/...`). Les notebooks de `notebooks/exploration/` commencent donc par une cellule qui se place à la racine (`os.chdir`) ; les scripts se lancent depuis la racine avec `python -m src.dossier.fichier`.
 - **`main.ipynb`** : une seule personne l'édite à la fois (prévenez le groupe).
 - **Branches** : une branche par tâche (ex. `hubeau-pagination`), puis une pull request vers `main`.
 - **Données** : jamais commitées. Tout doit pouvoir être re-téléchargé par le code.
