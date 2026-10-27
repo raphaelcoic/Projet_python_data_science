@@ -9,11 +9,11 @@ Toute modification du contrat se décide **à trois** et se note en bas de page.
 | Règle | Valeur |
 |---|---|
 | Maille | **département × année** |
-| Territoire | France métropolitaine (96 départements, Corse = `2A` et `2B`) |
-| Période | **2015 – 2022** (début du RPG au format actuel, fin des ventes BNV-D disponibles) |
+| Territoire | France métropolitaine continentale : **94 départements, hors Corse** (`2A`, `2B`) et hors DROM |
+| Période | **2013 – 2023** (achats de pesticides disponibles sur 2013-2023, millésimes RPG 2013 et 2023) |
 | Format | Parquet, dans `data/processed/` |
 | Noms de colonnes | `snake_case`, sans accents, unité en suffixe (`_kg`, `_ha`, `_ugl`) |
-| `code_dep` | **texte** sur 2 caractères : `"01"`, `"2A"`, `"75"` (jamais `1`) |
+| `code_dep` | **texte** sur 2 caractères : `"01"`, `"75"` (jamais `1`) |
 | `annee` | entier (`int`) |
 | Valeurs manquantes | `NaN` = pas de donnée ; `0` = mesuré / compté et nul. Ne jamais remplacer un `NaN` par `0`. |
 | Unicité | une seule ligne par clé (voir chaque table) ; à vérifier avec `df.duplicated(subset=cle).sum() == 0` |
@@ -22,7 +22,10 @@ Toute modification du contrat se décide **à trois** et se note en bas de page.
 
 La partie Eau suit trois **indices biologiques** des cours d'eau (Hub'Eau Hydrobiologie)
 plutôt que les concentrations de molécules : ils résument l'état écologique et sont
-disponibles partout sur 2015-2022.
+disponibles partout sur 2013-2023.
+
+Attention : le réseau de suivi I2M2 double en 2015 (environ 2 300 indices par an avant,
+4 000 après). Pour une évolution dans le temps, comparer à stations constantes.
 
 | Indice | Code SANDRE | Organismes | Sens |
 |---|---|---|---|
@@ -82,7 +85,7 @@ Clé : `code_dep`, `annee`, `cas`
 Points d'attention : utiliser les **achats par code postal de l'acheteur**
 (plus proche du lieu d'usage que les ventes, localisées chez le distributeur),
 puis passer du code postal au département. Piège : les codes postaux `20xxx`
-correspondent à la Corse (`2A` ou `2B`), pas à un département `"20"`.
+correspondent à la Corse, **à exclure** (hors périmètre), pas à un département `"20"`.
 Garder **toutes** les substances (utile pour les totaux), pas seulement la liste de référence.
 
 ## 4. Jointure : `data/processed/base_finale.parquet`
@@ -98,10 +101,8 @@ et départements présents d'un côté mais pas de l'autre (`indicator=True`).
 
 ## 5. Points ouverts (à décider à trois)
 
-- **Période** : le contrat dit 2015-2022, mais le RPG est téléchargé pour 2013 et 2023
-  (2023 retenue comme année de référence) et les achats de pesticides couvrent 2013-2023.
-- **Corse** : le contrat inclut `2A` et `2B`, mais les fichiers RPG nationaux l'excluent
-  (catégories de culture trop souvent manquantes, voir `tf_rpg_valeurs_manquantes_corse.ipynb`).
+- **Période** : 2013-2023, mais le RPG n'est téléchargé que pour 2013 et 2023. Pour un panel
+  annuel, télécharger les millésimes intermédiaires (`recuperer_parcelles_rpg` accepte 2010 à 2025).
 - **Champs** : `champs.parquet` (département × année × groupe de cultures) n'est pas encore
   produit ; les fichiers RPG actuels sont à la parcelle.
 - **Pesticides** : la source utilisée (achats par département, colonne `valeur`) n'est pas
@@ -113,3 +114,5 @@ et départements présents d'un côté mais pas de l'autre (`indicator=True`).
 |---|---|---|
 | | Version initiale | |
 | 2026-10-27 | Eau : indices biologiques (I2M2, IBD, IPR) à la place des molécules ; suppression de `molecules.csv` | à valider |
+| 2026-10-27 | Période élargie de 2015-2022 à 2013-2023 (période commune aux trois sources) | à valider |
+| 2026-10-27 | Corse retirée du périmètre (RPG trop incomplet en Corse, voir `tf_rpg_valeurs_manquantes_corse.ipynb`) | à valider |

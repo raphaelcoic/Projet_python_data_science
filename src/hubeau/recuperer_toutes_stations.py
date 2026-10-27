@@ -5,7 +5,7 @@ from src.hubeau.recuperer_stations import recuperer_stations
 
 
 def recuperer_toutes_stations():
-    """Récupère les stations de qualité des rivières des 96 départements de métropole."""
+    """Récupère les stations de qualité des rivières des 94 départements de métropole continentale."""
     resultats = []
     for dep in liste_departements():
         resultats.append(recuperer_stations(dep))

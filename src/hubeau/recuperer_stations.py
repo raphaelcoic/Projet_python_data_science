@@ -14,7 +14,7 @@ NB_ESSAIS = 4  # l'API fait des timeouts aléatoires qui passent quand on relanc
 def recuperer_stations(code_dep):
     """Récupère les stations de mesure de la qualité des rivières d'un département.
 
-    code_dep : code du département en texte sur 2 caractères ("01", "28", "2A").
+    code_dep : code du département en texte sur 2 caractères ("01", "28", "95").
     Renvoie un DataFrame avec une ligne par station.
     """
     params = {
