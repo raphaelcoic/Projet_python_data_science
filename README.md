@@ -52,6 +52,7 @@ pip install -r requirements.txt
 | Eau | exécuter les parties 1 et 2 de `main.ipynb` | `data/raw/*.parquet`, `data/processed/eau.parquet` |
 | Champs | `python -m src.agriculture.sauvegarder_parcelles_rpg` (plusieurs heures, reprend où il s'est arrêté) | `data/processed/rpg/rpg2013/`, `rpg2023/` |
 | | `python -m src.agriculture.fusionner_tous_millesimes_rpg` | `data/processed/rpg/rpg_{annee}_national.parquet` |
+| | `agreger_champs(pd.read_parquet("data/processed/rpg/rpg_2023_national.parquet"))` | `data/processed/champs.parquet` |
 | Pesticides | télécharger le CSV dans `data/raw/` | |
 
 ## Règles de travail en groupe
