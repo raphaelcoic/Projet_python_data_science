@@ -46,7 +46,7 @@ pip install -r requirements.txt
 
 ## Règles de travail en groupe
 
-- **Notebooks d'exploration** : nommés `initiales_sujet.ipynb` (ex. `rc_hubeau_stations.ipynb`). Chacun ne modifie que les siens, ce qui évite les conflits git sur les notebooks.
+- **Notebooks d'exploration** : tous dans `notebooks/exploration/`, nommés `initiales_sujet.ipynb` (ex. `rc_hubeau_stations.ipynb`), et listés dans `notebooks/README.md`. Chacun ne modifie que les siens, ce qui évite les conflits git sur les notebooks.
 - **Un fichier = une fonction** : quand un bout de code marche, il devient une fonction dans son propre fichier, nommé comme elle, dans le bon dossier de `src/`. Exemple : la fonction `recuperer_stations` va dans `src/hubeau/recuperer_stations.py` et s'importe avec `from src.hubeau.recuperer_stations import recuperer_stations`.
 - Lancer Jupyter depuis la racine du dépôt pour que les imports `src...` fonctionnent.
 - **`main.ipynb`** : une seule personne l'édite à la fois (prévenez le groupe).
