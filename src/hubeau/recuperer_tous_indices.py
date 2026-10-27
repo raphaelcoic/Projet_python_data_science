@@ -5,7 +5,7 @@ from src.hubeau.recuperer_indices import recuperer_indices
 
 
 def recuperer_tous_indices():
-    """Récupère les indices biologiques des rivières des 96 départements de métropole, de 2015 à 2022."""
+    """Récupère les indices biologiques des rivières des 94 départements de métropole continentale, de 2013 à 2023."""
     resultats = []
     for dep in liste_departements():
         resultats.append(recuperer_indices(dep))
