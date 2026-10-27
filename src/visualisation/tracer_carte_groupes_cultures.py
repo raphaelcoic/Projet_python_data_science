@@ -106,7 +106,7 @@ def tracer_carte_groupes_cultures(
         dep_geom.plot(ax=ax, facecolor="none", edgecolor="#222222", linewidth=1.2, zorder=3)
 
     nom_dep = sub["nom_dep"].dropna().iloc[0] if not sub["nom_dep"].dropna().empty else code_dep
-    annee = int(sub["annee"].dropna().iloc[0]) if not sub["annee"].dropna().empty else 2025
+    annee = int(sub["annee"].dropna().iloc[0]) if not sub["annee"].dropna().empty else 2023
     surf_tot = sub["surface_ha"].sum()
 
     ax.set_title(
