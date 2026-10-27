@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.hubeau.liste_departements import liste_departements
+from src.geo.liste_departements import liste_departements
 from src.hubeau.recuperer_stations import recuperer_stations
 
 

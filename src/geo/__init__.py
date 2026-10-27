@@ -1,8 +1,7 @@
-"""Traitements géographiques (geopandas).
+"""Référentiels géographiques communs.
 
-Fonctions attendues : chargement des fonds de carte (data/geo/), passage
-des stations en GeoDataFrame, reprojection (Lambert 93, EPSG:2154),
-jointures spatiales (sjoin, overlay, buffer).
+Fonctions : liste des 94 départements du périmètre d'étude (métropole continentale,
+hors Corse) et fonds de carte des départements (france-geojson, EPSG:4326).
 
 Règle : un fichier = une fonction, nommé comme la fonction.
 """

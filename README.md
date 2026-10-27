@@ -22,7 +22,7 @@ Projet Python pour la data science (ENSAE).
 │   ├── hubeau/             #   API Hub'Eau (stations, indices biologiques)
 │   ├── pesticides/         #   achats de pesticides
 │   ├── agriculture/        #   parcelles agricoles du RPG (WFS IGN) ; constantes_rpg.py = référentiels
-│   ├── geo/                #   geopandas : CRS, jointures spatiales
+│   ├── geo/                #   périmètre (94 départements, hors Corse) et fonds de carte
 │   ├── nettoyage/          #   nettoyage, agrégation, fusion
 │   └── visualisation/      #   graphiques et cartes
 ├── notebooks/
@@ -41,6 +41,8 @@ Projet Python pour la data science (ENSAE).
 
 ## Installation
 
+Python 3.9 ou plus récent.
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -50,7 +52,7 @@ pip install -r requirements.txt
 | Partie | Commande | Produit |
 |---|---|---|
 | Eau | exécuter les parties 1 et 2 de `main.ipynb` | `data/raw/*.parquet`, `data/processed/eau.parquet` |
-| Champs | `python -m src.agriculture.sauvegarder_parcelles_rpg` (plusieurs heures, reprend où il s'est arrêté) | `data/processed/rpg/rpg2013/`, `rpg2023/` |
+| Champs | `python -m src.agriculture.sauvegarder_parcelles_rpg` (millésimes 2013 et 2023, plusieurs heures, reprend où il s'est arrêté) | `data/processed/rpg/rpg2013/`, `rpg2023/` |
 | | `python -m src.agriculture.fusionner_tous_millesimes_rpg` | `data/processed/rpg/rpg_{annee}_national.parquet` |
 | | `agreger_champs(pd.read_parquet("data/processed/rpg/rpg_2023_national.parquet"))` | `data/processed/champs.parquet` |
 | Pesticides | télécharger le CSV dans `data/raw/` | |
