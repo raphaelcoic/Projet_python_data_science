@@ -23,7 +23,7 @@ from matplotlib.backends.backend_agg import RendererAgg
 from matplotlib.path import Path as MplPath
 from matplotlib.transforms import Affine2D
 
-from src.agriculture.constantes_rpg import COUCHE_DEP_ATTRIB, DEPARTEMENTS_OUTRE_MER, DOSSIER_RPG, PALETTE_GROUPES
+from src.agriculture.constantes_rpg import COUCHE_DEP_ATTRIB, DEPARTEMENTS_EXCLUS_DEFAUT, DOSSIER_RPG, PALETTE_GROUPES
 from src.agriculture.dossier_millesime_rpg import dossier_millesime_rpg
 from src.agriculture.recuperer_departements_ign import recuperer_departements_ign
 from src.visualisation.construire_chemins_groupes import construire_chemins_groupes
@@ -32,21 +32,18 @@ from src.visualisation.construire_chemins_groupes import construire_chemins_grou
 _EMPRISE_METRO_2154 = (99_000.0, 6_049_000.0, 1_243_000.0, 7_111_000.0)
 
 
-def _lire_stats_departement(f: Path, inclure_drom_legende: bool) -> tuple[str, int, pd.Series | None]:
+def _lire_stats_departement(f: Path) -> tuple[int, pd.Series | None]:
     """Lit uniquement les colonnes légères d'un fichier Parquet départemental."""
-    tbl = pq.read_table(f, columns=["code_dep", "libelle_groupe", "surface_ha"])
+    tbl = pq.read_table(f, columns=["libelle_groupe", "surface_ha"])
     if tbl.num_rows == 0:
-        return "", 0, None
+        return 0, None
     df_meta = tbl.to_pandas()
-    code_dep = str(df_meta["code_dep"].iloc[0])
-    if not inclure_drom_legende and code_dep in DEPARTEMENTS_OUTRE_MER:
-        return code_dep, 0, None
     df_meta["libelle_groupe"] = df_meta["libelle_groupe"].fillna("Non renseigné")
-    return code_dep, len(df_meta), df_meta.groupby("libelle_groupe")["surface_ha"].sum()
+    return len(df_meta), df_meta.groupby("libelle_groupe")["surface_ha"].sum()
 
 
 def _preparer_departement_france(f: Path, grp_to_id: dict[str, int], n_groupes: int) -> dict[int, MplPath]:
-    """Charge un département métropolitain et construit ses chemins vectoriels en Lambert-93."""
+    """Charge un département et construit ses chemins vectoriels en Lambert-93."""
     tbl = pq.read_table(f, columns=["libelle_groupe", "geometry"])
     if tbl.num_rows == 0:
         return {}
@@ -60,14 +57,14 @@ def _preparer_departement_france(f: Path, grp_to_id: dict[str, int], n_groupes: 
 def tracer_carte_france_groupes_cultures(
     dossier_parquet: str | Path = DOSSIER_RPG,
     fichier_sortie: str | Path | None = None,
-    annee: int = 2025,
-    inclure_drom_legende: bool = True,
+    annee: int = 2023,
     dpi: int = 250,
     max_workers: int | None = None,
 ) -> Path:
     """
-    Génère la carte de France entière des parcelles agricoles colorées par `libelle_groupe`
-    à partir des fichiers Parquet départementaux situés dans `data/processed/rpg/rpg{annee}/`.
+    Génère la carte de France métropolitaine continentale (hors Corse et DROM) des parcelles
+    agricoles colorées par `libelle_groupe`, à partir des fichiers Parquet départementaux
+    situés dans `data/processed/rpg/rpg{annee}/`. Le projet utilise le millésime 2023.
     Par défaut, la carte est enregistrée dans output/figures/carte_rpg_{annee}_france_groupes.png.
 
     L'extraction des anneaux, la projection Lambert-93 et la rastérisation (`RendererAgg`)
@@ -81,6 +78,9 @@ def tracer_carte_france_groupes_cultures(
         fichiers = sorted(dossier_annee.glob(f"rpg_{annee}_*.parquet"))
     else:
         fichiers = sorted(dossier_base.glob(f"rpg_{annee}_*.parquet"))
+
+    # Périmètre d'étude : on écarte la Corse et les DROM (code département en fin de nom de fichier)
+    fichiers = [f for f in fichiers if f.stem.split("_")[-1].upper() not in DEPARTEMENTS_EXCLUS_DEFAUT]
 
     if not fichiers:
         raise FileNotFoundError(
@@ -96,17 +96,14 @@ def tracer_carte_france_groupes_cultures(
     # 1. Passe légère parallélisée (sans géométrie) pour calculer les surfaces nationales
     stats_list = []
     nb_total = 0
-    fichiers_metro: list[Path] = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        resultats_meta = list(ex.map(lambda f: _lire_stats_departement(f, inclure_drom_legende), fichiers))
+        resultats_meta = list(ex.map(_lire_stats_departement, fichiers))
 
-    for f, (code_dep, n_rows, serie_surf) in zip(fichiers, resultats_meta):
+    for n_rows, serie_surf in resultats_meta:
         if serie_surf is not None:
             nb_total += n_rows
             stats_list.append(serie_surf)
-        if code_dep and code_dep not in DEPARTEMENTS_OUTRE_MER:
-            fichiers_metro.append(f)
 
     surfaces_groupes = pd.concat(stats_list).groupby(level=0).sum().sort_values(ascending=False)
     groupes = list(surfaces_groupes.index)
@@ -117,7 +114,7 @@ def tracer_carte_france_groupes_cultures(
     # 2. Contours départementaux (cache data/processed/rpg/_contours_departements.parquet)
     try:
         deps_gdf = recuperer_departements_ign(COUCHE_DEP_ATTRIB)
-        deps_metro = deps_gdf[~deps_gdf["code_dep"].isin(DEPARTEMENTS_OUTRE_MER)].to_crs(2154)
+        deps_metro = deps_gdf[~deps_gdf["code_dep"].isin(DEPARTEMENTS_EXCLUS_DEFAUT)].to_crs(2154)
     except Exception:
         deps_metro = None  # la carte reste lisible sans les contours
 
@@ -145,7 +142,7 @@ def tracer_carte_france_groupes_cultures(
 
     n_groupes = len(groupes)
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        for chemins_dep in ex.map(lambda f: _preparer_departement_france(f, grp_to_id, n_groupes), fichiers_metro):
+        for chemins_dep in ex.map(lambda f: _preparer_departement_france(f, grp_to_id, n_groupes), fichiers):
             for g_id, path in chemins_dep.items():
                 renderer.draw_path(gc, path, trans, rgba_par_id[g_id])
 
