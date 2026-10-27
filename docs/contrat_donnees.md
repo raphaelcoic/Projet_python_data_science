@@ -57,18 +57,18 @@ et retirer la valeur codée `999` de l'IPR (`src/nettoyage/nettoyer_indices.py`)
 
 ### B — Champs : `data/processed/champs.parquet`
 
-Clé : `code_dep`, `annee`, `code_groupe_culture`
+Clé : `code_dep`, `code_groupe_culture` — **millésime RPG 2023 uniquement** : l'assolement d'un
+département change peu d'une année à l'autre, la même photo sert pour toutes les années.
 
 | Colonne | Type | Description |
 |---|---|---|
 | `code_dep` | str | département de la parcelle |
-| `annee` | int | année du RPG |
-| `code_groupe_culture` | str | code du groupe de cultures RPG |
+| `code_groupe_culture` | str | code du groupe de cultures RPG (`"1"` à `"28"`) |
 | `libelle_groupe_culture` | str | libellé (blé tendre, maïs grain et ensilage, …) |
 | `surface_ha` | float | surface totale du groupe dans le département, en hectares |
 
-Points d'attention : le RPG est très lourd, travailler département par département
-et ne garder que les colonnes utiles ; livrer des surfaces, **pas de géométries**.
+Produit par `src/nettoyage/agreger_champs.py` à partir de `data/processed/rpg/rpg_2023_national.parquet`
+(somme de `surface_ha` par département et groupe de cultures, sans géométries).
 
 ### C — Pesticides : `data/processed/pesticides.parquet`
 
@@ -94,17 +94,13 @@ Réalisée dans `src/nettoyage/` une fois les trois livrables prêts.
 
 - `eau` passé en colonnes (une colonne par indice) via `code_dep`, `annee`
 - × `pesticides` sommé par département et année (`quantite_kg` totale) via `code_dep`, `annee`
-- × `champs` passé en colonnes (une colonne de surface par groupe de cultures + `surface_agricole_ha` totale) via `code_dep`, `annee`
+- × `champs` passé en colonnes (une colonne de surface par groupe de cultures + `surface_agricole_ha` totale) via `code_dep` seulement (RPG 2023 pour toutes les années)
 
 Contrôles obligatoires : nombre de lignes avant / après chaque `merge`,
 et départements présents d'un côté mais pas de l'autre (`indicator=True`).
 
 ## 5. Points ouverts (à décider à trois)
 
-- **Période** : 2013-2023, mais le RPG n'est téléchargé que pour 2013 et 2023. Pour un panel
-  annuel, télécharger les millésimes intermédiaires (`recuperer_parcelles_rpg` accepte 2010 à 2025).
-- **Champs** : `champs.parquet` (département × année × groupe de cultures) n'est pas encore
-  produit ; les fichiers RPG actuels sont à la parcelle.
 - **Pesticides** : la source utilisée (achats par département, colonne `valeur`) n'est pas
   celle prévue (achats BNV-D par code postal, en kg, avec `cas`) ; unité et clé à fixer.
 
@@ -116,3 +112,4 @@ et départements présents d'un côté mais pas de l'autre (`indicator=True`).
 | 2026-10-27 | Eau : indices biologiques (I2M2, IBD, IPR) à la place des molécules ; suppression de `molecules.csv` | à valider |
 | 2026-10-27 | Période élargie de 2015-2022 à 2013-2023 (période commune aux trois sources) | à valider |
 | 2026-10-27 | Corse retirée du périmètre (RPG trop incomplet en Corse, voir `tf_rpg_valeurs_manquantes_corse.ipynb`) | à valider |
+| 2026-10-27 | Champs : RPG 2023 seul, clé `code_dep` × `code_groupe_culture`, jointure sur `code_dep` | à valider |
