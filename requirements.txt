@@ -1,6 +1,10 @@
 pandas
+numpy
 requests
 geopandas
-matplotlib
-pyarrow
+shapely>=2.0
+pyproj
+matplotlib>=3.9
+seaborn
+pyarrow>=14
 jupyter

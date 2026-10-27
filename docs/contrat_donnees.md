@@ -9,67 +9,66 @@ Toute modification du contrat se décide **à trois** et se note en bas de page.
 | Règle | Valeur |
 |---|---|
 | Maille | **département × année** |
-| Territoire | France métropolitaine (96 départements, Corse = `2A` et `2B`) |
-| Période | **2015 – 2022** (début du RPG au format actuel, fin des ventes BNV-D disponibles) |
+| Territoire | France métropolitaine continentale : **94 départements, hors Corse** (`2A`, `2B`) et hors DROM |
+| Période | **2013 – 2023** (achats de pesticides disponibles sur 2013-2023, millésimes RPG 2013 et 2023) |
 | Format | Parquet, dans `data/processed/` |
 | Noms de colonnes | `snake_case`, sans accents, unité en suffixe (`_kg`, `_ha`, `_ugl`) |
-| `code_dep` | **texte** sur 2 caractères : `"01"`, `"2A"`, `"75"` (jamais `1`) |
+| `code_dep` | **texte** sur 2 caractères : `"01"`, `"75"` (jamais `1`) |
 | `annee` | entier (`int`) |
-| `code_sandre` | texte (`"1506"`, pas `1506`) |
 | Valeurs manquantes | `NaN` = pas de donnée ; `0` = mesuré / compté et nul. Ne jamais remplacer un `NaN` par `0`. |
 | Unicité | une seule ligne par clé (voir chaque table) ; à vérifier avec `df.duplicated(subset=cle).sum() == 0` |
 
-## 2. Molécules étudiées
+## 2. Indicateurs de qualité de l'eau
 
-Liste de référence : [`data/reference/molecules.csv`](../data/reference/molecules.csv) (versionné dans git).
+La partie Eau suit trois **indices biologiques** des cours d'eau (Hub'Eau Hydrobiologie)
+plutôt que les concentrations de molécules : ils résument l'état écologique et sont
+disponibles partout sur 2013-2023.
 
-| Colonne | Description | Rempli par |
-|---|---|---|
-| `molecule` | nom usuel | fixé |
-| `molecule_mere` | substance vendue dont elle provient (= `molecule` si ce n'est pas un métabolite) | fixé |
-| `code_sandre` | code paramètre SANDRE utilisé par Hub'Eau | **A** |
-| `cas` | numéro CAS utilisé dans la BNV-D | **C** |
+Attention : le réseau de suivi I2M2 double en 2015 (environ 2 300 indices par an avant,
+4 000 après). Pour une évolution dans le temps, comparer à stations constantes.
 
-Les métabolites (AMPA, ESA-métolachlore, déséthylatrazine) sont mesurés dans l'eau
-mais ne sont pas vendus : on les rattache aux ventes de leur `molecule_mere`.
+| Indice | Code SANDRE | Organismes | Sens |
+|---|---|---|---|
+| I2M2 | 7613 | invertébrés | élevé = bonne qualité |
+| IBD | 5856 | diatomées | élevé = bonne qualité |
+| IPR | 7036 | poissons | **bas** = bonne qualité |
+
+L'ancienne liste `data/reference/molecules.csv` est supprimée : la jointure avec les
+pesticides se fait sur `code_dep` × `annee` (quantités totales), plus par molécule.
 
 ## 3. Livrables
 
 ### A — Eau : `data/processed/eau.parquet`
 
-Clé : `code_dep`, `annee`, `milieu`, `code_sandre`
+Clé : `code_dep`, `annee`, `indice`
 
 | Colonne | Type | Description |
 |---|---|---|
 | `code_dep` | str | département de la station |
 | `annee` | int | année du prélèvement |
-| `milieu` | str | `"riviere"` ou `"nappe"` |
-| `code_sandre` | str | molécule (voir `molecules.csv`) |
-| `nb_stations` | int | nombre de stations ayant au moins une analyse |
-| `nb_analyses` | int | nombre d'analyses |
-| `nb_quantifications` | int | analyses où la molécule est quantifiée (`code_remarque == 1`) |
-| `taux_quantification` | float | `nb_quantifications / nb_analyses` |
-| `concentration_moyenne_ugl` | float | moyenne en µg/L, **analyses non quantifiées comptées à 0** |
-| `concentration_max_ugl` | float | maximum en µg/L |
-| `nb_depassements` | int | analyses > 0,1 µg/L (norme eau potable par pesticide) |
+| `indice` | str | `"I2M2"`, `"IBD"` ou `"IPR"` |
+| `nb_stations` | int | nombre de stations ayant au moins un indice |
+| `nb_prelevements` | int | nombre d'indices calculés |
+| `valeur_moyenne` | float | moyenne de l'indice sur les prélèvements |
+| `valeur_mediane` | float | médiane de l'indice sur les prélèvements |
 
-Points d'attention : ne garder que les résultats en µg/L (vérifier l'unité),
-agréger les stations au département avant de livrer.
+Points d'attention : ne garder que les indices qualifiés « corrects » (`code_qualification == "1"`)
+et retirer la valeur codée `999` de l'IPR (`src/nettoyage/nettoyer_indices.py`).
 
 ### B — Champs : `data/processed/champs.parquet`
 
-Clé : `code_dep`, `annee`, `code_groupe_culture`
+Clé : `code_dep`, `code_groupe_culture` — **millésime RPG 2023 uniquement** : l'assolement d'un
+département change peu d'une année à l'autre, la même photo sert pour toutes les années.
 
 | Colonne | Type | Description |
 |---|---|---|
 | `code_dep` | str | département de la parcelle |
-| `annee` | int | année du RPG |
-| `code_groupe_culture` | str | code du groupe de cultures RPG |
+| `code_groupe_culture` | str | code du groupe de cultures RPG (`"1"` à `"28"`) |
 | `libelle_groupe_culture` | str | libellé (blé tendre, maïs grain et ensilage, …) |
 | `surface_ha` | float | surface totale du groupe dans le département, en hectares |
 
-Points d'attention : le RPG est très lourd, travailler département par département
-et ne garder que les colonnes utiles ; livrer des surfaces, **pas de géométries**.
+Produit par `src/nettoyage/agreger_champs.py` à partir de `data/processed/rpg/rpg_2023_national.parquet`
+(somme de `surface_ha` par département et groupe de cultures, sans géométries).
 
 ### C — Pesticides : `data/processed/pesticides.parquet`
 
@@ -86,22 +85,31 @@ Clé : `code_dep`, `annee`, `cas`
 Points d'attention : utiliser les **achats par code postal de l'acheteur**
 (plus proche du lieu d'usage que les ventes, localisées chez le distributeur),
 puis passer du code postal au département. Piège : les codes postaux `20xxx`
-correspondent à la Corse (`2A` ou `2B`), pas à un département `"20"`.
+correspondent à la Corse, **à exclure** (hors périmètre), pas à un département `"20"`.
 Garder **toutes** les substances (utile pour les totaux), pas seulement la liste de référence.
 
 ## 4. Jointure : `data/processed/base_finale.parquet`
 
 Réalisée dans `src/nettoyage/` une fois les trois livrables prêts.
 
-- `eau` × `molecules.csv` (via `code_sandre`) → ajoute `molecule_mere`
-- × `pesticides` (via `cas` de la `molecule_mere`, `code_dep`, `annee`) → ajoute `quantite_kg`
-- × `champs` passé en colonnes (une colonne de surface par groupe de cultures + `surface_agricole_ha` totale) via `code_dep`, `annee`
+- `eau` passé en colonnes (une colonne par indice) via `code_dep`, `annee`
+- × `pesticides` sommé par département et année (`quantite_kg` totale) via `code_dep`, `annee`
+- × `champs` passé en colonnes (une colonne de surface par groupe de cultures + `surface_agricole_ha` totale) via `code_dep` seulement (RPG 2023 pour toutes les années)
 
 Contrôles obligatoires : nombre de lignes avant / après chaque `merge`,
 et départements présents d'un côté mais pas de l'autre (`indicator=True`).
+
+## 5. Points ouverts (à décider à trois)
+
+- **Pesticides** : la source utilisée (achats par département, colonne `valeur`) n'est pas
+  celle prévue (achats BNV-D par code postal, en kg, avec `cas`) ; unité et clé à fixer.
 
 ## Historique des modifications
 
 | Date | Modification | Validé par |
 |---|---|---|
 | | Version initiale | |
+| 2026-10-27 | Eau : indices biologiques (I2M2, IBD, IPR) à la place des molécules ; suppression de `molecules.csv` | à valider |
+| 2026-10-27 | Période élargie de 2015-2022 à 2013-2023 (période commune aux trois sources) | à valider |
+| 2026-10-27 | Corse retirée du périmètre (RPG trop incomplet en Corse, voir `tf_rpg_valeurs_manquantes_corse.ipynb`) | à valider |
+| 2026-10-27 | Champs : RPG 2023 seul, clé `code_dep` × `code_groupe_culture`, jointure sur `code_dep` | à valider |
