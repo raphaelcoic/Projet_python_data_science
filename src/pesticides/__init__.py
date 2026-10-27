@@ -1,7 +1,7 @@
-"""Récupération des données de ventes de pesticides (BNV-D).
+"""Récupération des achats de produits phytosanitaires par département.
 
-Fonctions attendues : téléchargement et lecture des fichiers de ventes
-(par code postal ou département), sauvegardés dans data/raw/.
+Fonctions attendues : téléchargement du fichier dans data/raw/, lecture
+(codes département en texte) et agrégation vers pesticides.parquet.
 
 Règle : un fichier = une fonction, nommé comme la fonction.
 """

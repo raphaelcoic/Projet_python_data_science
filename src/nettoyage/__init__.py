@@ -1,8 +1,8 @@
-"""Nettoyage et fusion des données.
+"""Nettoyage, agrégation et fusion des données.
 
-Fonctions attendues : typage des colonnes, valeurs manquantes, filtres,
-agrégations (groupby), fusion des sources (merge). Les tables propres
-sont sauvegardées dans data/processed/.
+Fonctions : nettoyage des indices biologiques, agrégation au département
+des livrables eau.parquet et champs.parquet (sauvegardés dans data/processed/),
+comparaison d'un département à la France.
 
 Règle : un fichier = une fonction, nommé comme la fonction.
 """
