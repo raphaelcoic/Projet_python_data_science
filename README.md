@@ -9,7 +9,8 @@ Projet Python pour la data science (ENSAE).
 | Données | Source |
 |---|---|
 | Indices biologiques des cours d'eau (I2M2, IBD, IPR) | [Hub'Eau – Hydrobiologie](https://hubeau.eaufrance.fr/page/api-hydrobiologie) |
-| Stations de mesure des cours d'eau | [Hub'Eau – Qualité des cours d'eau](https://hubeau.eaufrance.fr/page/api-qualite-cours-deau) |
+| Stations de mesure des cours d'eau | [Hub'Eau – Qualité des cours d'eau](https://hubeau.eaufrance.fr/page/api-qualite-cours-deau) et [Hydrobiologie](https://hubeau.eaufrance.fr/page/api-hydrobiologie) |
+| Zones hydrographiques | [BD TOPAGE](https://www.sandre.eaufrance.fr/atlas/srv/fre/catalog.search#/home) (Sandre), via son WFS |
 | Achats de produits phytosanitaires par département | CSV data.gouv.fr (lien exact à ajouter) |
 | Parcelles agricoles | [RPG](https://www.data.gouv.fr/datasets/rpg) (IGN / ASP), via le WFS de la Géoplateforme |
 | Fonds de carte | [france-geojson](https://github.com/gregoiredavid/france-geojson), ADMIN-EXPRESS (IGN) |
@@ -24,7 +25,8 @@ Projet Python pour la data science (ENSAE).
 │   ├── agriculture/        #   parcelles agricoles du RPG (WFS IGN) ; constantes_rpg.py = référentiels
 │   ├── geo/                #   périmètre (94 départements, hors Corse) et fonds de carte
 │   ├── nettoyage/          #   nettoyage, agrégation, fusion
-│   └── visualisation/      #   graphiques et cartes
+│   ├── visualisation/      #   graphiques et cartes
+│   └── telecharger_donnee.py #  récupère un fichier déjà calculé depuis la release
 ├── notebooks/
 │   ├── README.md           #   index des notebooks (qui, quoi)
 │   └── exploration/        #   brouillons perso (un par personne / sujet)
@@ -47,6 +49,22 @@ Python 3.9 ou plus récent.
 pip install -r requirements.txt
 ```
 
+## Récupérer les données déjà calculées
+
+Les fichiers longs à produire sont sur la release [`donnees-v1`](https://github.com/raphaelcoic/Projet_python_data_science/releases/tag/donnees-v1). `telecharger_donnee` les télécharge s'ils manquent en local, sans compte GitHub :
+
+```python
+from src.telecharger_donnee import telecharger_donnee
+
+zones = gpd.read_parquet(telecharger_donnee("data/geo/zones_hydro.parquet"))
+```
+
+Pour ajouter ou remplacer un fichier (droits d'écriture sur le dépôt, nom de fichier unique dans la release) :
+
+```bash
+gh release upload donnees-v1 data/processed/champs_zones.parquet --clobber
+```
+
 ## Régénérer les données
 
 | Partie | Commande | Produit |
@@ -56,6 +74,10 @@ pip install -r requirements.txt
 | | `python -m src.agriculture.fusionner_tous_millesimes_rpg` | `data/processed/rpg/rpg_{annee}_national.parquet` |
 | | `agreger_champs(pd.read_parquet("data/processed/rpg/rpg_2023_national.parquet"))` | `data/processed/champs.parquet` |
 | Pesticides | télécharger le CSV dans `data/raw/` | |
+| Zones | `recuperer_zones_hydro()` et `recuperer_toutes_stations_hydrobio()` | `data/geo/zones_hydro.parquet`, `data/raw/stations_hydrobio.parquet` |
+| | `rattacher_stations_zones(stations, zones)` | `data/processed/stations_zones.parquet` |
+| | `agreger_tous_champs_zones(zones)` (lit `rpg2023/`) | `data/processed/champs_zones.parquet` |
+| | `construire_base_zones(indices, stations_zones, champs_zones, zones)` | `data/processed/base_zones.parquet` |
 
 ## Règles de travail en groupe
 
@@ -64,7 +86,7 @@ pip install -r requirements.txt
 - **Chemins** : le code utilise des chemins relatifs à la racine du dépôt (`data/...`). Les notebooks de `notebooks/exploration/` commencent donc par une cellule qui se place à la racine (`os.chdir`) ; les scripts se lancent depuis la racine avec `python -m src.dossier.fichier`.
 - **`main.ipynb`** : une seule personne l'édite à la fois (prévenez le groupe).
 - **Branches** : une branche par tâche (ex. `hubeau-pagination`), puis une pull request vers `main`.
-- **Données** : jamais commitées. Tout doit pouvoir être re-téléchargé par le code.
+- **Données** : jamais commitées. Tout doit pouvoir être re-téléchargé par le code ; la release ne sert que de raccourci.
 - Avant de commit un notebook, vider les sorties lourdes (*Kernel → Restart & Clear Output*) si possible.
 
 ## Répartition
