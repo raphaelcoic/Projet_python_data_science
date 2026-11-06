@@ -3,7 +3,7 @@ def construire_base_zones(indices, stations_zones, champs_zones, zones):
 
     indices : DataFrame renvoyé par nettoyer_indices.
     stations_zones : DataFrame renvoyé par rattacher_stations_zones.
-    champs_zones : DataFrame renvoyé par agreger_tous_champs_zones.
+    champs_zones : DataFrame renvoyé par agreger_champs_zones.
     zones : GeoDataFrame renvoyé par recuperer_zones_hydro.
     Pour chaque indice, on prend la médiane de chaque station puis la médiane des stations
     de la zone, pour qu'une station très suivie ne pèse pas plus que les autres.
