@@ -121,8 +121,8 @@ Clé : `code_zone`, `code_groupe_culture`
 | `libelle_groupe_culture` | str | libellé du groupe |
 | `surface_ha` | float | surface du groupe dans la zone, en hectares |
 
-Chaque parcelle du RPG 2023 va entière dans la zone qui contient son `representative_point`.
-Il faut les fichiers départementaux `rpg2023/` : le fichier national n'a pas de géométries.
+Chaque parcelle du RPG 2023 va entière dans la zone qui contient son point : la colonne
+`point_reference` de `rpg_2023_national.parquet`, calculée avec `representative_point()`.
 
 ### `data/processed/base_zones.parquet`
 
