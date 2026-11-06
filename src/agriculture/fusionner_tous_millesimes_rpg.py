@@ -16,11 +16,13 @@ def fusionner_tous_millesimes_rpg(
     dossier_racine: str | Path = DOSSIER_RPG,
     departements_exclus: tuple[str, ...] | list[str] = DEPARTEMENTS_EXCLUS_DEFAUT,
     colonnes: list[str] | None = None,
+    ajouter_point_reference: bool = True,
     ecraser: bool = True,
     verbose: bool = True,
 ) -> dict[int, Path]:
     """
-    Génère les fichiers Parquet nationaux (sans `geometry`, hors Corse et DROM)
+    Génère les fichiers Parquet nationaux (sans le polygone `geometry`, avec
+    `point_reference` calculé via `representative_point()`, hors Corse et DROM)
     pour l'ensemble des millésimes spécifiés dans `annees`.
     """
     return {
@@ -29,6 +31,7 @@ def fusionner_tous_millesimes_rpg(
             dossier_racine=dossier_racine,
             departements_exclus=departements_exclus,
             colonnes=colonnes,
+            ajouter_point_reference=ajouter_point_reference,
             ecraser=ecraser,
             verbose=verbose,
         )

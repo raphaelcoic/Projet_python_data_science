@@ -17,7 +17,7 @@ COUCHE_DEP_ATTRIB = "ADMINEXPRESS-COG-CARTO.LATEST:departement"  # plus précise
 DOSSIER_RPG = Path("data/processed/rpg")
 CHEMIN_CACHE_CONTOURS_DEP = DOSSIER_RPG / "_contours_departements.parquet"
 
-# Les 13 variables strictement retenues pour le projet
+# Les 13 variables strictement retenues pour les fichiers départementaux du projet
 COLONNES_PROJET_RPG: list[str] = [
     "id_parcelle",
     "annee",
@@ -36,6 +36,10 @@ COLONNES_PROJET_RPG: list[str] = [
 
 # Les 12 variables tabulaires (sans `geometry`, pour les fichiers nationaux allégés)
 COLONNES_TABULAIRES_RPG: list[str] = [col for col in COLONNES_PROJET_RPG if col != "geometry"]
+
+# Colonne contenant le point représentatif (`representative_point()`) de chaque parcelle dans les fichiers nationaux
+COLONNE_POINT_REFERENCE: str = "point_reference"
+COLONNES_NATIONALES_RPG: list[str] = [*COLONNES_TABULAIRES_RPG, COLONNE_POINT_REFERENCE]
 
 # Libellés des grandes catégories de culture (champ cat_cult_p)
 CATEGORIES_CULTURE: dict[str, str] = {
