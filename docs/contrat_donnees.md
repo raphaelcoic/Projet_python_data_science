@@ -99,7 +99,48 @@ Réalisée dans `src/nettoyage/` une fois les trois livrables prêts.
 Contrôles obligatoires : nombre de lignes avant / après chaque `merge`,
 et départements présents d'un côté mais pas de l'autre (`indicator=True`).
 
-## 5. Points ouverts (à décider à trois)
+## 5. Croisement eau × cultures par zone hydrographique
+
+Le département mélange des bassins très différents. Pour croiser l'eau et les cultures,
+on passe donc par les 6 190 zones hydrographiques de la BD TOPAGE (`data/geo/zones_hydro.parquet`).
+`champs.parquet` reste au département pour le croisement avec les pesticides.
+
+### `data/processed/stations_zones.parquet`
+
+Clé : `code_station`. Colonnes : `code_station` (str), `code_zone` (str).
+Chaque station va dans la zone qui la contient, ou dans la plus proche si elle est juste hors limites.
+
+### `data/processed/champs_zones.parquet`
+
+Clé : `code_zone`, `code_groupe_culture`
+
+| Colonne | Type | Description |
+|---|---|---|
+| `code_zone` | str | code de la zone hydrographique |
+| `code_groupe_culture` | str | code du groupe de cultures RPG |
+| `libelle_groupe_culture` | str | libellé du groupe |
+| `surface_ha` | float | surface du groupe dans la zone, en hectares |
+
+Chaque parcelle du RPG 2023 va entière dans la zone qui contient son `representative_point`.
+Il faut les fichiers départementaux `rpg2023/` : le fichier national n'a pas de géométries.
+
+### `data/processed/base_zones.parquet`
+
+Clé : `code_zone`. Une ligne par zone ayant au moins une station avec un indice.
+
+| Colonne | Type | Description |
+|---|---|---|
+| `code_zone`, `nom_zone` | str | zone hydrographique |
+| `I2M2`, `IBD`, `IPR` | float | médiane des médianes 2013-2023 des stations de la zone |
+| `nb_stations` | int | nombre de stations de la zone ayant un indice |
+| `surface_zone_ha` | float | surface de la zone, en hectares |
+| `part_agricole` | float | part de la zone en parcelles du RPG, en % |
+| `part_groupe_1`, … | float | part de la zone occupée par chaque groupe de cultures, en % |
+
+Limite : la zone ne couvre que le bassin local. Pour une station sur un grand cours d'eau,
+une partie de l'amont reste hors de la zone.
+
+## 6. Points ouverts (à décider à trois)
 
 - **Pesticides** : la source utilisée (achats par département, colonne `valeur`) n'est pas
   celle prévue (achats BNV-D par code postal, en kg, avec `cas`) ; unité et clé à fixer.
@@ -113,3 +154,4 @@ et départements présents d'un côté mais pas de l'autre (`indicator=True`).
 | 2026-10-27 | Période élargie de 2015-2022 à 2013-2023 (période commune aux trois sources) | à valider |
 | 2026-10-27 | Corse retirée du périmètre (RPG trop incomplet en Corse, voir `tf_rpg_valeurs_manquantes_corse.ipynb`) | à valider |
 | 2026-10-27 | Champs : RPG 2023 seul, clé `code_dep` × `code_groupe_culture`, jointure sur `code_dep` | à valider |
+| 2026-11-06 | Ajout du croisement eau × cultures par zone hydrographique (`stations_zones`, `champs_zones`, `base_zones`) | à valider |
