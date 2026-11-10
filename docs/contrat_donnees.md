@@ -12,6 +12,7 @@ Toute modification du contrat se décide **à trois** et se note en bas de page.
 | Territoire | France métropolitaine continentale : **94 départements, hors Corse** (`2A`, `2B`) et hors DROM |
 | Période | **2013 – 2023** (achats de pesticides disponibles sur 2013-2023, millésimes RPG 2013 et 2023) |
 | Format | Parquet, dans `data/processed/` |
+| Partage | chaque fichier est déposé sur la release `donnees-v1` et lu avec `telecharger_donnee(chemin, creer)` (local, sinon release, sinon créé puis déposé) |
 | Noms de colonnes | `snake_case`, sans accents, unité en suffixe (`_kg`, `_ha`, `_ugl`) |
 | `code_dep` | **texte** sur 2 caractères : `"01"`, `"75"` (jamais `1`) |
 | `annee` | entier (`int`) |
@@ -163,3 +164,4 @@ une partie de l'amont reste hors de la zone.
 | 2026-10-27 | Champs : RPG 2023 seul, clé `code_dep` × `code_groupe_culture`, jointure sur `code_dep` | à valider |
 | 2026-11-06 | Ajout du croisement eau × cultures par zone hydrographique (`stations_zones`, `champs_zones`, `base_zones`) | à valider |
 | 2026-11-10 | `champs_zones` : grandes parcelles partagées entre les zones qu'elles touchent, doublons du fichier national comptés une fois | à valider |
+| 2026-11-10 | Tous les fichiers téléchargés et intermédiaires sur la release `donnees-v1`, via `telecharger_donnee` | à valider |

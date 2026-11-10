@@ -51,18 +51,25 @@ pip install -r requirements.txt
 
 ## Récupérer les données déjà calculées
 
-Les fichiers longs à produire sont sur la release [`donnees-v1`](https://github.com/raphaelcoic/Projet_python_data_science/releases/tag/donnees-v1). `telecharger_donnee` les télécharge s'ils manquent en local, sans compte GitHub :
+Tous les fichiers téléchargés et tous les fichiers intermédiaires de `main.ipynb` sont sur la release [`donnees-v1`](https://github.com/raphaelcoic/Projet_python_data_science/releases/tag/donnees-v1). Chacun passe par `telecharger_donnee(chemin, creer)`, qui suit cet ordre :
+
+1. Si le fichier existe en local, il est utilisé.
+2. Sinon, il est téléchargé depuis la release, sans compte GitHub.
+3. S'il n'est pas non plus dans la release, il est créé avec `creer()`, puis déposé dans la release avec `gh`. Il faut avoir les droits d'écriture sur le dépôt.
 
 ```python
 from src.telecharger_donnee import telecharger_donnee
 
-zones = gpd.read_parquet(telecharger_donnee("data/geo/zones_hydro.parquet"))
+zones = gpd.read_parquet(telecharger_donnee("data/geo/zones_hydro.parquet", recuperer_zones_hydro))
+eau = pd.read_parquet(telecharger_donnee("data/processed/eau.parquet", lambda: agreger_eau(indices_propres)))
 ```
 
-Pour ajouter ou remplacer un fichier (droits d'écriture sur le dépôt, nom de fichier unique dans la release) :
+Le fichier national du RPG (`rpg_2023_national.parquet`) est le seul sans `creer` : il est produit par `src/agriculture` en plusieurs heures (voir plus bas).
+
+Les noms de fichiers doivent être uniques dans la release. Si le code qui produit un fichier change, supprimez sa copie locale et sa copie dans la release, puis relancez le notebook : le fichier est recréé et redéposé.
 
 ```bash
-gh release upload donnees-v1 data/processed/champs_zones.parquet --clobber
+gh release delete-asset donnees-v1 champs_zones.parquet --yes
 ```
 
 ## Régénérer les données
