@@ -76,7 +76,8 @@ gh release upload donnees-v1 data/processed/champs_zones.parquet --clobber
 | Pesticides | télécharger le CSV dans `data/raw/` | |
 | Zones | `recuperer_zones_hydro()` et `recuperer_toutes_stations_hydrobio()` | `data/geo/zones_hydro.parquet`, `data/raw/stations_hydrobio.parquet` |
 | | `rattacher_stations_zones(stations, zones)` | `data/processed/stations_zones.parquet` |
-| | `agreger_champs_zones(parcelles, zones)` (lit `rpg_2023_national.parquet`, colonne `point_reference`) | `data/processed/champs_zones.parquet` |
+| | `recuperer_polygones_rpg(choisir_parcelles_a_decouper(parcelles, zones))` (contour des grandes parcelles, WFS IGN) | `data/processed/rpg/polygones_a_decouper_2023.parquet` |
+| | `agreger_champs_zones(parcelles, zones, polygones)` (lit `rpg_2023_national.parquet`, colonne `point_reference`) | `data/processed/champs_zones.parquet` |
 | | `construire_base_zones(indices, stations_zones, champs_zones, zones)` | `data/processed/base_zones.parquet` |
 
 ## Règles de travail en groupe
