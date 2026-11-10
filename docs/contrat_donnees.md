@@ -124,6 +124,13 @@ Clé : `code_zone`, `code_groupe_culture`
 Chaque parcelle du RPG 2023 va entière dans la zone qui contient son point : la colonne
 `point_reference` de `rpg_2023_national.parquet`, calculée avec `representative_point()`.
 
+Exception : les parcelles d'au moins 100 ha, ou d'au moins 1 % de la zone qui contient leur point
+(surtout des estives de montagne), sont partagées entre les zones qu'elles touchent, au prorata
+de la surface. Leur contour est téléchargé sur le WFS de l'IGN et gardé dans
+`data/processed/rpg/polygones_a_decouper_2023.parquet` (`id_parcelle`, `geometry`).
+Les parcelles présentes deux fois dans le fichier national (même `id_parcelle`, à la limite de
+deux départements) ne sont comptées qu'une fois.
+
 ### `data/processed/base_zones.parquet`
 
 Clé : `code_zone`. Une ligne par zone ayant au moins une station avec un indice.
@@ -155,3 +162,4 @@ une partie de l'amont reste hors de la zone.
 | 2026-10-27 | Corse retirée du périmètre (RPG trop incomplet en Corse, voir `tf_rpg_valeurs_manquantes_corse.ipynb`) | à valider |
 | 2026-10-27 | Champs : RPG 2023 seul, clé `code_dep` × `code_groupe_culture`, jointure sur `code_dep` | à valider |
 | 2026-11-06 | Ajout du croisement eau × cultures par zone hydrographique (`stations_zones`, `champs_zones`, `base_zones`) | à valider |
+| 2026-11-10 | `champs_zones` : grandes parcelles partagées entre les zones qu'elles touchent, doublons du fichier national comptés une fois | à valider |
