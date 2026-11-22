@@ -64,7 +64,7 @@ zones = gpd.read_parquet(telecharger_donnee("data/geo/zones_hydro.parquet", recu
 eau = pd.read_parquet(telecharger_donnee("data/processed/eau.parquet", lambda: agreger_eau(indices_propres)))
 ```
 
-Le fichier national du RPG (`rpg_2023_national.parquet`) est le seul sans `creer` : il est produit par `src/agriculture` en plusieurs heures (voir plus bas).
+L'archive du RPG de l'IGN (2,75 Go) n'est pas dans la release : elle dépasse la limite de 2 Go par fichier de GitHub, et l'IGN l'héberge déjà. `recuperer_rpg_ign()` la télécharge dans `data/raw/rpg_ign/`.
 
 Les noms de fichiers doivent être uniques dans la release. Si le code qui produit un fichier change, supprimez sa copie locale et sa copie dans la release, puis relancez le notebook : le fichier est recréé et redéposé.
 
@@ -83,8 +83,7 @@ gh release delete-asset donnees-v1 champs_zones.parquet --yes
 | Pesticides | télécharger le CSV dans `data/raw/` | |
 | Zones | `recuperer_zones_hydro()` et `recuperer_toutes_stations_hydrobio()` | `data/geo/zones_hydro.parquet`, `data/raw/stations_hydrobio.parquet` |
 | | `rattacher_stations_zones(stations, zones)` | `data/processed/stations_zones.parquet` |
-| | `recuperer_polygones_rpg(choisir_parcelles_a_decouper(parcelles, zones))` (contour des grandes parcelles, WFS IGN) | `data/processed/rpg/polygones_a_decouper_2023.parquet` |
-| | `agreger_champs_zones(parcelles, zones, polygones)` (lit `rpg_2023_national.parquet`, colonne `point_reference`) | `data/processed/champs_zones.parquet` |
+| | `agreger_champs_zones(recuperer_rpg_ign(), zones)` (archive RPG 2023 de l'IGN, 2,75 Go, environ 30 min) | `data/processed/champs_zones.parquet` |
 | | `construire_base_zones(indices, stations_zones, champs_zones, zones)` | `data/processed/base_zones.parquet` |
 
 ## Règles de travail en groupe

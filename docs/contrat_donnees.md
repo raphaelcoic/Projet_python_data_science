@@ -122,15 +122,11 @@ Clé : `code_zone`, `code_groupe_culture`
 | `libelle_groupe_culture` | str | libellé du groupe |
 | `surface_ha` | float | surface du groupe dans la zone, en hectares |
 
-Chaque parcelle du RPG 2023 va entière dans la zone qui contient son point : la colonne
-`point_reference` de `rpg_2023_national.parquet`, calculée avec `representative_point()`.
-
-Exception : les parcelles d'au moins 100 ha, ou d'au moins 1 % de la zone qui contient leur point
-(surtout des estives de montagne), sont partagées entre les zones qu'elles touchent, au prorata
-de la surface. Leur contour est téléchargé sur le WFS de l'IGN et gardé dans
-`data/processed/rpg/polygones_a_decouper_2023.parquet` (`id_parcelle`, `geometry`).
-Les parcelles présentes deux fois dans le fichier national (même `id_parcelle`, à la limite de
-deux départements) ne sont comptées qu'une fois.
+Parcelles : archive nationale du RPG 2023 de l'IGN (`RPG_2-2__GPKG_LAMB93_FXX_2023-01-01`),
+avec le contour de chaque parcelle. Ce sont les mêmes parcelles que `rpg_2023_national.parquet`
+(même `id_parcelle`, même surface, même groupe), plus la Corse. Une parcelle qui touche une seule
+zone y va entière ; une parcelle qui en touche plusieurs est coupée selon leurs limites, et sa
+surface déclarée est répartie au prorata de chaque morceau.
 
 ### `data/processed/base_zones.parquet`
 
@@ -165,3 +161,4 @@ une partie de l'amont reste hors de la zone.
 | 2026-11-06 | Ajout du croisement eau × cultures par zone hydrographique (`stations_zones`, `champs_zones`, `base_zones`) | à valider |
 | 2026-11-10 | `champs_zones` : grandes parcelles partagées entre les zones qu'elles touchent, doublons du fichier national comptés une fois | à valider |
 | 2026-11-10 | Tous les fichiers téléchargés et intermédiaires sur la release `donnees-v1`, via `telecharger_donnee` | à valider |
+| 2026-11-10 | `champs_zones` : toutes les parcelles coupées selon les zones, à partir de l'archive RPG de l'IGN (remplace le point de référence) | à valider |
