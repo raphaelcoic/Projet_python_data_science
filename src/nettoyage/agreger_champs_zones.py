@@ -1,35 +1,46 @@
 import pandas as pd
+import pyogrio
+
+from src.agriculture.constantes_rpg import LIBELLES_GROUPES_RPG
 
 CLE = ["code_zone", "code_groupe_culture", "libelle_groupe_culture"]
-COLONNES = ["code_zone", "code_groupe", "libelle_groupe", "surface_ha"]
+TAILLE_PAQUET = 500_000
 
 
-def agreger_champs_zones(parcelles, zones, polygones):
+def _agreger_paquet(parcelles, zones):
+    """Surface de chaque groupe de cultures par zone, pour un paquet de parcelles."""
+    paires = parcelles.sjoin(zones[["code_zone", "geometry"]], predicate="intersects")
+    coupees = paires.index.duplicated(keep=False)
+    contours = paires.geometry[coupees].make_valid()
+    morceaux = contours.intersection(zones.geometry.loc[paires.loc[coupees, "index_right"]], align=False)
+    paires.loc[coupees, "SURF_PARC"] *= morceaux.area / contours.area
+    return paires.groupby(["code_zone", "CODE_GROUP"])["SURF_PARC"].sum()
+
+
+def agreger_champs_zones(chemin_rpg, zones):
     """Agrège les parcelles du RPG à la zone hydrographique × groupe de cultures (surfaces en hectares).
 
-    parcelles : GeoDataFrame de data/processed/rpg/rpg_2023_national.parquet, dont la géométrie
-    point_reference est le representative_point de chaque parcelle.
+    chemin_rpg : GeoPackage des parcelles renvoyé par recuperer_rpg_ign.
     zones : GeoDataFrame renvoyé par recuperer_zones_hydro.
-    polygones : GeoDataFrame renvoyé par recuperer_polygones_rpg, contour des grandes parcelles.
-    Une grande parcelle est partagée entre les zones qu'elle touche, au prorata de la surface.
-    Les autres vont entières dans la zone qui contient leur point.
+    Une parcelle qui touche une seule zone y va entière. Une parcelle qui en touche
+    plusieurs est coupée selon leurs limites, et sa surface est répartie au prorata.
+    Les parcelles sont lues par paquets de 500 000 pour limiter la mémoire.
     Renvoie un DataFrame avec les colonnes de champs_zones.parquet.
     """
-    parcelles = parcelles.drop_duplicates("id_parcelle").to_crs(zones.crs)
-    a_decouper = parcelles["id_parcelle"].isin(polygones["id_parcelle"])
+    nb_parcelles = pyogrio.read_info(chemin_rpg)["features"]
+    paquets = []
+    for debut in range(0, nb_parcelles, TAILLE_PAQUET):
+        parcelles = pyogrio.read_dataframe(
+            chemin_rpg,
+            columns=["CODE_GROUP", "SURF_PARC"],
+            skip_features=debut,
+            max_features=TAILLE_PAQUET,
+            use_arrow=True,
+        ).to_crs(zones.crs)
+        parcelles["SURF_PARC"] = parcelles["SURF_PARC"].astype("float64")
+        paquets.append(_agreger_paquet(parcelles, zones))
 
-    entieres = parcelles[~a_decouper].sjoin(zones[["code_zone", "geometry"]], predicate="within")
-
-    attributs = pd.DataFrame(parcelles.loc[a_decouper].drop(columns="point_reference"))
-    contours = polygones.merge(attributs, on="id_parcelle").to_crs(zones.crs)
-    contours.geometry = contours.make_valid()
-    contours["surface_contour"] = contours.area
-    morceaux = contours.overlay(zones[["code_zone", "geometry"]], keep_geom_type=True)
-    morceaux["surface_ha"] = morceaux["surface_ha"] * morceaux.area / morceaux["surface_contour"]
-
-    toutes = pd.concat([entieres[COLONNES], morceaux[COLONNES]])
-    toutes = toutes.rename(columns={
-        "code_groupe": "code_groupe_culture",
-        "libelle_groupe": "libelle_groupe_culture",
-    })
-    return toutes.groupby(CLE, as_index=False)["surface_ha"].sum()
+    surfaces = pd.concat(paquets).groupby(level=[0, 1]).sum().reset_index()
+    surfaces.columns = ["code_zone", "code_groupe_culture", "surface_ha"]
+    surfaces["libelle_groupe_culture"] = surfaces["code_groupe_culture"].map(LIBELLES_GROUPES_RPG)
+    return surfaces[[*CLE, "surface_ha"]]
