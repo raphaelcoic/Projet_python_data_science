@@ -1,10 +1,8 @@
-"""Récupération des données agricoles : parcelles du RPG via le WFS de la Géoplateforme IGN.
+"""Données agricoles : parcelles du RPG 2023, lues dans l'archive nationale publiée par l'IGN.
 
-Fonctions : téléchargement des parcelles par département (recuperer_parcelles_rpg),
-sauvegarde par millésime dans data/processed/rpg/ (sauvegarder_parcelles_rpg),
-puis fusion en un fichier national avec point de référence `point_reference`
-issu de `representative_point()` (fusionner_tous_millesimes_rpg).
-Les référentiels partagés (colonnes, groupes de cultures) sont dans constantes_rpg.py.
+Fonctions : téléchargement et décompression de l'archive (recuperer_rpg_ign),
+lecture des parcelles par paquets (lire_parcelles_rpg).
+Les libellés des groupes de cultures sont dans constantes_rpg.py.
 
 Règle : un fichier = une fonction, nommé comme la fonction.
 """

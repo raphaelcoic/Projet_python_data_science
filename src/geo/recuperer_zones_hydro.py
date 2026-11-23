@@ -18,8 +18,7 @@ def recuperer_zones_hydro():
 
     Renvoie un GeoDataFrame avec code_zone, nom_zone, surface_zone_ha et geometry (EPSG:2154).
     """
-    reponse = requests.get(URL, params=PARAMS, timeout=300)
-    reponse.raise_for_status()
+    reponse = requests.get(URL, params=PARAMS)
     zones = gpd.GeoDataFrame.from_features(reponse.json(), crs="EPSG:2154")
     zones = zones.rename(columns={"CdOH": "code_zone", "TopoOH": "nom_zone"})
     zones["surface_zone_ha"] = zones.area / 10000

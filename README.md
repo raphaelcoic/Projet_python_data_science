@@ -9,20 +9,20 @@ Projet Python pour la data science (ENSAE).
 | Données | Source |
 |---|---|
 | Indices biologiques des cours d'eau (I2M2, IBD, IPR) | [Hub'Eau – Hydrobiologie](https://hubeau.eaufrance.fr/page/api-hydrobiologie) |
-| Stations de mesure des cours d'eau | [Hub'Eau – Qualité des cours d'eau](https://hubeau.eaufrance.fr/page/api-qualite-cours-deau) et [Hydrobiologie](https://hubeau.eaufrance.fr/page/api-hydrobiologie) |
+| Stations hydrobiologiques (coordonnées) | [Hub'Eau – Hydrobiologie](https://hubeau.eaufrance.fr/page/api-hydrobiologie) |
 | Zones hydrographiques | [BD TOPAGE](https://www.sandre.eaufrance.fr/atlas/srv/fre/catalog.search#/home) (Sandre), via son WFS |
 | Achats de produits phytosanitaires par département | CSV data.gouv.fr (lien exact à ajouter) |
-| Parcelles agricoles | [RPG](https://www.data.gouv.fr/datasets/rpg) (IGN / ASP), via le WFS de la Géoplateforme |
-| Fonds de carte | [france-geojson](https://github.com/gregoiredavid/france-geojson), ADMIN-EXPRESS (IGN) |
+| Parcelles agricoles | [RPG](https://www.data.gouv.fr/datasets/rpg) (IGN / ASP), archive nationale 2023 |
+| Fonds de carte | [france-geojson](https://github.com/gregoiredavid/france-geojson) |
 
 ## Organisation du dépôt
 
 ```
 ├── main.ipynb              # Notebook FINAL : raconte l'analyse, appelle les fonctions de src/
 ├── src/                    # Code réutilisable : un fichier = une fonction
-│   ├── hubeau/             #   API Hub'Eau (stations, indices biologiques)
+│   ├── hubeau/             #   API Hub'Eau (stations, indices biologiques) et indices agrégés par zone
 │   ├── pesticides/         #   achats de pesticides
-│   ├── agriculture/        #   parcelles agricoles du RPG (WFS IGN) ; constantes_rpg.py = référentiels
+│   ├── agriculture/        #   parcelles agricoles du RPG (archive IGN) ; constantes_rpg.py = libellés des cultures
 │   ├── geo/                #   périmètre (94 départements, hors Corse) et fonds de carte
 │   ├── nettoyage/          #   nettoyage, agrégation, fusion
 │   ├── visualisation/      #   graphiques et cartes
@@ -32,10 +32,9 @@ Projet Python pour la data science (ENSAE).
 │   └── exploration/        #   brouillons perso (un par personne / sujet)
 ├── data/
 │   ├── raw/                #   données brutes téléchargées (non versionné)
-│   ├── processed/          #   livrables du contrat de données, et rpg/ (non versionné)
+│   ├── processed/          #   livrables du contrat de données (non versionné)
 │   └── geo/                #   shapefiles / fonds de carte (non versionné)
 ├── docs/contrat_donnees.md # Format des livrables de chaque partie
-├── output/figures/         # Figures exportées
 └── requirements.txt
 ```
 
@@ -51,7 +50,7 @@ pip install -r requirements.txt
 
 ## Récupérer les données déjà calculées
 
-Tous les fichiers téléchargés et tous les fichiers intermédiaires de `main.ipynb` sont sur la release [`donnees-v1`](https://github.com/raphaelcoic/Projet_python_data_science/releases/tag/donnees-v1). Chacun passe par `telecharger_donnee(chemin, creer)`, qui suit cet ordre :
+Les fichiers de `main.ipynb` sont sur la release [`donnees-v1`](https://github.com/raphaelcoic/Projet_python_data_science/releases/tag/donnees-v1). Pour la partie eau, seule la table finale `eau_zones.parquet` (indices agrégés par zone hydrographique) y est : les stations et les indices sont demandés directement à l'API Hub'Eau. Chaque fichier de la release passe par `telecharger_donnee(chemin, creer)`, qui suit cet ordre :
 
 1. Si le fichier existe en local, il est utilisé.
 2. Sinon, il est téléchargé depuis la release, sans compte GitHub.
@@ -61,35 +60,31 @@ Tous les fichiers téléchargés et tous les fichiers intermédiaires de `main.i
 from src.telecharger_donnee import telecharger_donnee
 
 zones = gpd.read_parquet(telecharger_donnee("data/geo/zones_hydro.parquet", recuperer_zones_hydro))
-eau = pd.read_parquet(telecharger_donnee("data/processed/eau.parquet", lambda: agreger_eau(indices_propres)))
+eau_zones = pd.read_parquet(telecharger_donnee("data/processed/eau_zones.parquet", lambda: agreger_eau_zones(indices_propres, stations_zones)))
+champs_zones = pd.read_parquet(telecharger_donnee("data/processed/champs_zones.parquet", lambda: agreger_champs_zones(recuperer_rpg_ign(), zones), recalculer=True))  # régénère
 ```
 
 L'archive du RPG de l'IGN (2,75 Go) n'est pas dans la release : elle dépasse la limite de 2 Go par fichier de GitHub, et l'IGN l'héberge déjà. `recuperer_rpg_ign()` la télécharge dans `data/raw/rpg_ign/`.
 
-Les noms de fichiers doivent être uniques dans la release. Si le code qui produit un fichier change, supprimez sa copie locale et sa copie dans la release, puis relancez le notebook : le fichier est recréé et redéposé.
-
-```bash
-gh release delete-asset donnees-v1 champs_zones.parquet --yes
-```
+Les noms de fichiers doivent être uniques dans la release. Si le code qui produit un fichier change, passez `recalculer=True` : le fichier est recréé, puis remplace sa copie locale et sa copie dans la release.
 
 ## Régénérer les données
 
 | Partie | Commande | Produit |
 |---|---|---|
-| Eau | exécuter les parties 1 et 2 de `main.ipynb` | `data/raw/*.parquet`, `data/processed/eau.parquet` |
-| Champs | `python -m src.agriculture.sauvegarder_parcelles_rpg` (millésimes 2013 et 2023, plusieurs heures, reprend où il s'est arrêté) | `data/processed/rpg/rpg2013/`, `rpg2023/` |
-| | `python -m src.agriculture.fusionner_tous_millesimes_rpg` | `data/processed/rpg/rpg_{annee}_national.parquet` |
-| | `agreger_champs(pd.read_parquet("data/processed/rpg/rpg_2023_national.parquet"))` | `data/processed/champs.parquet` |
+| Eau | `recuperer_toutes_stations_hydrobio()`, `recuperer_tous_indices()` (API Hub'Eau, plusieurs minutes) | en mémoire |
+| Champs | `agreger_champs(recuperer_rpg_ign(), departements)` (archive RPG 2023 de l'IGN, 2,75 Go) | `data/processed/champs.parquet` |
 | Pesticides | télécharger le CSV dans `data/raw/` | |
-| Zones | `recuperer_zones_hydro()` et `recuperer_toutes_stations_hydrobio()` | `data/geo/zones_hydro.parquet`, `data/raw/stations_hydrobio.parquet` |
-| | `rattacher_stations_zones(stations, zones)` | `data/processed/stations_zones.parquet` |
+| Zones | `recuperer_zones_hydro()` | `data/geo/zones_hydro.parquet` |
+| | `rattacher_stations_zones(stations, zones)` | en mémoire (`stations_zones`) |
 | | `agreger_champs_zones(recuperer_rpg_ign(), zones)` (archive RPG 2023 de l'IGN, 2,75 Go, environ 30 min) | `data/processed/champs_zones.parquet` |
-| | `construire_base_zones(indices, stations_zones, champs_zones, zones)` | `data/processed/base_zones.parquet` |
+| | `agreger_eau_zones(indices, stations_zones)` (seul fichier eau de la release) | `data/processed/eau_zones.parquet` |
+| | `construire_base_zones(eau_zones, champs_zones, zones)` | `data/processed/base_zones.parquet` |
 
 ## Règles de travail en groupe
 
 - **Notebooks d'exploration** : tous dans `notebooks/exploration/`, nommés `initiales_sujet.ipynb` (ex. `rc_hubeau_stations.ipynb`), et listés dans `notebooks/README.md`. Chacun ne modifie que les siens, ce qui évite les conflits git sur les notebooks.
-- **Un fichier = une fonction** : quand un bout de code marche, il devient une fonction dans son propre fichier, nommé comme elle, dans le bon dossier de `src/`. Exemple : la fonction `recuperer_stations` va dans `src/hubeau/recuperer_stations.py` et s'importe avec `from src.hubeau.recuperer_stations import recuperer_stations`.
+- **Un fichier = une fonction** : quand un bout de code marche, il devient une fonction dans son propre fichier, nommé comme elle, dans le bon dossier de `src/`. Exemple : la fonction `recuperer_indices` va dans `src/hubeau/recuperer_indices.py` et s'importe avec `from src.hubeau.recuperer_indices import recuperer_indices`.
 - **Chemins** : le code utilise des chemins relatifs à la racine du dépôt (`data/...`). Les notebooks de `notebooks/exploration/` commencent donc par une cellule qui se place à la racine (`os.chdir`) ; les scripts se lancent depuis la racine avec `python -m src.dossier.fichier`.
 - **`main.ipynb`** : une seule personne l'édite à la fois (prévenez le groupe).
 - **Branches** : une branche par tâche (ex. `hubeau-pagination`), puis une pull request vers `main`.
@@ -101,7 +96,7 @@ gh release delete-asset donnees-v1 champs_zones.parquet --yes
 | Étape | Membre A — Eau | Membre B — Champs | Membre C — Pesticides |
 |---|---|---|---|
 | Nom | _…_ | _…_ | _…_ |
-| 1. Collecte (en parallèle) | `src/hubeau/` → `eau.parquet` | `src/agriculture/` → `champs.parquet` | `src/pesticides/` → `pesticides.parquet` |
+| 1. Collecte (en parallèle) | `src/hubeau/` → `eau_zones.parquet` | `src/agriculture/` → `champs.parquet` | `src/pesticides/` → `pesticides.parquet` |
 | 2. Jointure (une personne) | `src/nettoyage/` → `base_finale.parquet` | | |
 | 3. Stats descriptives (en parallèle) | qualité de l'eau | surfaces et cultures | achats de pesticides |
 
