@@ -12,7 +12,7 @@ Projet Python pour la data science (ENSAE).
 | Stations hydrobiologiques (coordonnées) | [Hub'Eau – Hydrobiologie](https://hubeau.eaufrance.fr/page/api-hydrobiologie) |
 | Zones hydrographiques | [BD TOPAGE](https://www.sandre.eaufrance.fr/atlas/srv/fre/catalog.search#/home) (Sandre), via son WFS |
 | Achats de produits phytosanitaires par département | CSV data.gouv.fr (lien exact à ajouter) |
-| Parcelles agricoles | [RPG](https://www.data.gouv.fr/datasets/rpg) (IGN / ASP), archive nationale 2023 |
+| Parcelles agricoles | [RPG](https://www.data.gouv.fr/datasets/rpg) (IGN / ASP), archives de l'IGN : nationale pour 2023, régionales pour 2013 |
 | Fonds de carte | [france-geojson](https://github.com/gregoiredavid/france-geojson) |
 
 ## Organisation du dépôt
@@ -64,7 +64,7 @@ eau_zones = pd.read_parquet(telecharger_donnee("data/processed/eau_zones.parquet
 champs_zones = pd.read_parquet(telecharger_donnee("data/processed/champs_zones.parquet", lambda: agreger_champs_zones(recuperer_rpg_ign(), zones), recalculer=True))  # régénère
 ```
 
-L'archive du RPG de l'IGN (2,75 Go) n'est pas dans la release : elle dépasse la limite de 2 Go par fichier de GitHub, et l'IGN l'héberge déjà. `recuperer_rpg_ign()` la télécharge dans `data/raw/rpg_ign/`.
+L'archive du RPG de l'IGN (2,75 Go) n'est pas dans la release : elle dépasse la limite de 2 Go par fichier de GitHub, et l'IGN l'héberge déjà. `recuperer_rpg_ign()` la télécharge dans `data/raw/rpg_ign/` (et `recuperer_rpg_2013_ign()` les 13 archives régionales de 2013). Les tables à la parcelle qui en sont tirées, sans les contours (`parcelles_rpg_2023.parquet`, `ilots_rpg_2013.parquet`), sont dans la release.
 
 Les noms de fichiers doivent être uniques dans la release. Si le code qui produit un fichier change, passez `recalculer=True` : le fichier est recréé, puis remplace sa copie locale et sa copie dans la release.
 
@@ -73,7 +73,9 @@ Les noms de fichiers doivent être uniques dans la release. Si le code qui produ
 | Partie | Commande | Produit |
 |---|---|---|
 | Eau | `recuperer_toutes_stations_hydrobio()`, `recuperer_tous_indices()` (API Hub'Eau, plusieurs minutes) | en mémoire |
-| Champs | `agreger_champs(recuperer_rpg_ign(), departements)` (archive RPG 2023 de l'IGN, 2,75 Go) | `data/processed/champs.parquet` |
+| Champs | `tabuler_parcelles_rpg(recuperer_rpg_ign(), recuperer_departements(avec_corse=True))` (archive RPG 2023 de l'IGN, 2,75 Go) | `data/processed/parcelles_rpg_2023.parquet` |
+| | `tabuler_ilots_rpg_2013(recuperer_rpg_2013_ign(), recuperer_departements(avec_corse=True))` (pour les notebooks de Tomia) | `data/processed/ilots_rpg_2013.parquet` |
+| | `agreger_champs(parcelles_rpg_2023)` | `data/processed/champs.parquet` |
 | Pesticides | télécharger le CSV dans `data/raw/` | |
 | Zones | `recuperer_zones_hydro()` | `data/geo/zones_hydro.parquet` |
 | | `rattacher_stations_zones(stations, zones)` | en mémoire (`stations_zones`) |

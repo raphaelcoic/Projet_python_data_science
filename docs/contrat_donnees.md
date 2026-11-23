@@ -55,9 +55,10 @@ département change peu d'une année à l'autre, la même photo sert pour toutes
 | `libelle_groupe_culture` | str | libellé (blé tendre, maïs grain et ensilage, …) |
 | `surface_ha` | float | surface totale du groupe dans le département, en hectares |
 
-Produit par `src/nettoyage/agreger_champs.py` à partir de l'archive nationale du RPG 2023 de l'IGN
-(`RPG_2-2__GPKG_LAMB93_FXX_2023-01-01`) : chaque parcelle va au département qui contient un point
-de sa surface, et on somme la surface déclarée par département et groupe de cultures.
+Produit par `src/nettoyage/agreger_champs.py` à partir de `data/processed/parcelles_rpg_2023.parquet`,
+une ligne par parcelle de l'archive nationale du RPG 2023 de l'IGN (`RPG_2-2__GPKG_LAMB93_FXX_2023-01-01`),
+construite par `src/agriculture/tabuler_parcelles_rpg.py` : chaque parcelle va au département qui contient
+un point de sa surface. On somme ensuite la surface déclarée par département et groupe de cultures.
 
 ### B — Pesticides : `data/processed/pesticides.parquet`
 
@@ -154,7 +155,7 @@ une partie de l'amont reste hors de la zone.
 | | Version initiale | |
 | 2026-10-27 | Eau : indices biologiques (I2M2, IBD, IPR) à la place des molécules ; suppression de `molecules.csv` | à valider |
 | 2026-10-27 | Période élargie de 2015-2022 à 2013-2023 (période commune aux trois sources) | à valider |
-| 2026-10-27 | Corse retirée du périmètre (RPG trop incomplet en Corse, voir `tf_rpg_valeurs_manquantes_corse.ipynb` dans l'historique git) | à valider |
+| 2026-10-27 | Corse retirée du périmètre (RPG trop incomplet en Corse, voir `tf_rpg_valeurs_manquantes_corse.ipynb`) | à valider |
 | 2026-10-27 | Champs : RPG 2023 seul, clé `code_dep` × `code_groupe_culture`, jointure sur `code_dep` | à valider |
 | 2026-11-06 | Ajout du croisement eau × cultures par zone hydrographique (`stations_zones`, `champs_zones`, `base_zones`) | à valider |
 | 2026-11-10 | `champs_zones` : grandes parcelles partagées entre les zones qu'elles touchent, doublons du fichier national comptés une fois | à valider |
