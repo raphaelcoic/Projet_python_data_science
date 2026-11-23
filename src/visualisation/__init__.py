@@ -1,6 +1,6 @@
-"""Graphiques et cartes utilisés dans le notebook final.
+"""Graphiques et cartes.
 
-Fonctions attendues : production des figures, exportées dans output/figures/.
+Les fonctions tracent sur un axe matplotlib fourni (ou renvoient la figure).
 
 Règle : un fichier = une fonction, nommé comme la fonction.
 """
