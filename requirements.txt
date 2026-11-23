@@ -1,6 +1,10 @@
 pandas
+numpy
 requests
 geopandas
-matplotlib
-pyarrow
+pyogrio
+matplotlib>=3.9
+seaborn
+pyarrow>=14
 jupyter
+py7zr
