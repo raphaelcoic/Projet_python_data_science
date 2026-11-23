@@ -7,8 +7,7 @@ FIELDS = (
     "code_station_hydrobio,code_departement,date_prelevement,"
     "code_indice,resultat_indice,code_qualification"
 )
-TAILLE_MAX = 10000  # taille de page maximale de cette API (un département fait au plus ~2 500 indices sur 2013-2023)
-NB_ESSAIS = 4  # l'API fait des timeouts aléatoires qui passent quand on relance
+TAILLE_MAX = 10000  # taille de page maximale de l'API, assez pour un département
 
 
 def recuperer_indices(code_dep):
@@ -25,13 +24,7 @@ def recuperer_indices(code_dep):
         "size": TAILLE_MAX,
         "fields": FIELDS,
     }
-    for essai in range(NB_ESSAIS):
-        try:
-            reponse = requests.get(URL, params=params, timeout=120)
-            break
-        except requests.exceptions.Timeout:
-            print(f"Timeout pour le département {code_dep} (essai {essai + 1}/{NB_ESSAIS})")
-            if essai == NB_ESSAIS - 1:
-                raise
-    reponse.raise_for_status()
+    reponse = requests.get(URL, params=params)
+    while not reponse.ok:  # l'API renvoie parfois une erreur 503 qui passe quand on relance
+        reponse = requests.get(URL, params=params)
     return pd.DataFrame(reponse.json()["data"]).drop(columns="geometry")  # geometry est renvoyée même hors de fields

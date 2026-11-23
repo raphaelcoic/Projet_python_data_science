@@ -2,8 +2,7 @@ pandas
 numpy
 requests
 geopandas
-shapely>=2.0
-pyproj
+pyogrio
 matplotlib>=3.9
 seaborn
 pyarrow>=14

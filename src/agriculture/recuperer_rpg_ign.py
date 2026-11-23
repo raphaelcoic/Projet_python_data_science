@@ -11,8 +11,7 @@ def recuperer_rpg_ign(dossier="data/raw/rpg_ign"):
     """Télécharge et décompresse l'archive nationale du RPG 2023 publiée par l'IGN.
 
     dossier : dossier où ranger l'archive (2,75 Go) et son contenu décompressé.
-    C'est la même donnée que le WFS utilisé par src/agriculture, en un seul fichier
-    GeoPackage (Lambert 93, France métropolitaine avec la Corse).
+    L'archive contient un GeoPackage des parcelles (Lambert 93, France métropolitaine avec la Corse).
     Renvoie le chemin du GeoPackage des parcelles.
     """
     dossier = Path(dossier)
