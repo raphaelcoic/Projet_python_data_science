@@ -8,11 +8,11 @@ Toute modification du contrat se décide **à trois** et se note en bas de page.
 
 | Règle | Valeur |
 |---|---|
-| Maille | **zone hydrographique × année** pour le croisement final (`base_zones`) ; les achats de pesticides sont au **département × année** |
+| Maille | **zone hydrographique × année** pour le croisement final (`base_finale`) ; les achats de pesticides sont au **département × année** |
 | Territoire | France métropolitaine continentale : **94 départements, hors Corse** (`2A`, `2B`) et hors DROM |
 | Période | **2013 – 2023** (achats de pesticides disponibles sur 2013-2023 ; le RPG 2023 sert pour toutes les années) |
 | Format | Parquet, dans `data/processed/` |
-| Partage | les fichiers sont lus avec `telecharger_donnee(chemin, creer)` (local, sinon release `donnees-v1`, sinon créé puis déposé ; `recalculer=True` pour le régénérer). Pour l'eau, seul `eau_zones.parquet` est dans la release ; les stations et indices Hub'Eau sont demandés à l'API |
+| Partage | les fichiers sont lus avec `telecharger_donnee(chemin, creer)` (local, sinon release `donnees-v1`, sinon créé puis déposé ; `recalculer=True` pour le régénérer). Pour l'eau, seul `eau_zones_hydro.parquet` est dans la release ; les stations et indices Hub'Eau sont demandés à l'API. Pour le croisement, seuls `parcelles_zones_hydro.parquet` et `base_finale.parquet` y sont ; `champs_zones_hydro` et `pesticides_zones_hydro` sont calculés en mémoire |
 | Noms de colonnes | `snake_case`, sans accents, unité en suffixe (`_kg`, `_ha`, `_ugl`) |
 | `code_dep` | **texte** sur 2 caractères : `"01"`, `"75"` (jamais `1`) |
 | `annee` | entier (`int`) |
@@ -39,7 +39,7 @@ les 10 molécules de la partie 3.B, attribuées aux zones hydrographiques (parti
 
 Nettoyage : ne garder que les indices qualifiés « corrects » (`code_qualification == "1"`)
 et retirer la valeur codée `999` de l'IPR (`src/eau/nettoyer_indices.py`).
-L'eau n'a pas de livrable au département : elle est agrégée à la zone hydrographique (`eau_zones.parquet`, partie 5).
+L'eau n'a pas de livrable au département : elle est agrégée à la zone hydrographique (`eau_zones_hydro.parquet`, partie 5).
 
 ## 3. Livrables
 
@@ -102,12 +102,12 @@ Le département mélange des bassins très différents. Pour croiser l'eau et le
 on passe donc par les 6 190 zones hydrographiques de la BD TOPAGE (`data/geo/zones_hydro.parquet`).
 Les pesticides, achetés au département, passent par les doses de la partie 4 et par la part de chaque parcelle dans chaque zone.
 
-### `stations_zones` (en mémoire, pas de fichier)
+### `stations_zones_hydro` (en mémoire, pas de fichier)
 
 Clé : `code_station`. Colonnes : `code_station` (str), `code_zone` (str).
 Chaque station va dans la zone qui la contient, ou dans la plus proche si elle est juste hors limites.
 
-### `data/processed/eau_zones.parquet`
+### `data/processed/eau_zones_hydro.parquet`
 
 Clé : `code_zone`, `annee`. Une ligne par zone et par année où au moins une station de la zone a un indice.
 **Seule base de la partie eau déposée sur la release.**
@@ -119,9 +119,9 @@ Clé : `code_zone`, `annee`. Une ligne par zone et par année où au moins une s
 | `I2M2`, `IBD`, `IPR` | float | médiane, sur les stations de la zone, de la moyenne des mesures de chaque station dans l'année |
 | `nb_stations` | int | nombre de stations de la zone ayant un indice cette année-là |
 
-Produit par `src/eau/agreger_eau_zones.py` à partir des indices nettoyés et de `stations_zones`.
+Produit par `src/eau/agreger_eau_zones_hydro.py` à partir des indices nettoyés et de `stations_zones_hydro`.
 
-### `data/processed/champs_zones.parquet`
+### `champs_zones_hydro` (en mémoire, pas de fichier)
 
 Clé : `code_zone`, `code_groupe_culture`
 
@@ -132,11 +132,11 @@ Clé : `code_zone`, `code_groupe_culture`
 | `libelle_groupe_culture` | str | libellé du groupe |
 | `surface_ha` | float | surface du groupe dans la zone, en hectares |
 
-Produit par `src/zones_hydrographiques/agreger_champs_zones.py` à partir de `parcelles_zones` et de
+Produit par `src/zones_hydrographiques/agreger_champs_zones_hydro.py` à partir de `parcelles_zones_hydro` et de
 `parcelles_rpg_2023` : chaque parcelle compte dans chaque zone qu'elle touche pour sa part de
 surface déclarée.
 
-### `data/processed/parcelles_zones.parquet`
+### `data/processed/parcelles_zones_hydro.parquet`
 
 Clé : `id_parcelle`, `code_zone`. Une ligne par parcelle du RPG 2023 et par zone qu'elle touche.
 
@@ -146,9 +146,9 @@ Clé : `id_parcelle`, `code_zone`. Une ligne par parcelle du RPG 2023 et par zon
 | `code_zone` | str | code de la zone hydrographique |
 | `part` | float | part de la parcelle dans la zone : 1 si elle n'en touche qu'une, sinon aire du morceau / aire de la parcelle ; les parts d'une parcelle font 1 |
 
-Produit par `src/zones_hydrographiques/associer_parcelles_zones.py` à partir des contours de l'archive IGN.
+Produit par `src/zones_hydrographiques/associer_parcelles_zones_hydro.py` à partir des contours de l'archive IGN.
 
-### `data/processed/pesticides_zones.parquet`
+### `pesticides_zones_hydro` (en mémoire, pas de fichier)
 
 Clé : `code_zone`, `annee`. Quantités des 10 molécules attribuées à la zone (kg de substance active), 2013 à 2023.
 
@@ -158,19 +158,19 @@ Clé : `code_zone`, `annee`. Quantités des 10 molécules attribuées à la zone
 | `annee` | int | année d'achat |
 | `glyphosate_kg`, … | float | somme, sur les parcelles de la zone, de la quantité attribuée à la parcelle × sa part dans la zone |
 
-Produit par `src/zones_hydrographiques/agreger_pesticides_zones.py` : les doses de la partie 4 multipliées par la
-surface de chaque groupe de cultures de chaque département dans la zone (`parcelles_zones` × `parcelles_rpg_2023`),
+Produit par `src/zones_hydrographiques/agreger_pesticides_zones_hydro.py` : les doses de la partie 4 multipliées par la
+surface de chaque groupe de cultures de chaque département dans la zone (`parcelles_zones_hydro` × `parcelles_rpg_2023`),
 ce qui revient à sommer la quantité de chaque parcelle × sa part dans la zone.
 
-### `data/processed/base_zones.parquet`
+### `data/processed/base_finale.parquet`
 
-Clé : `code_zone`, `annee`. Une ligne par ligne de `eau_zones.parquet` ; les parts de cultures (RPG 2023) sont les mêmes pour toutes les années d'une zone.
-Produit par `src/zones_hydrographiques/fusionner_eau_cultures_pesticides.py`, qui fusionne `eau_zones`, `champs_zones` et `pesticides_zones`.
+Clé : `code_zone`, `annee`. Une ligne par ligne de `eau_zones_hydro.parquet` ; les parts de cultures (RPG 2023) sont les mêmes pour toutes les années d'une zone.
+Produit par `src/zones_hydrographiques/fusionner_eau_cultures_pesticides.py`, qui fusionne `eau_zones_hydro`, `champs_zones_hydro` et `pesticides_zones_hydro`.
 
 | Colonne | Type | Description |
 |---|---|---|
 | `code_zone`, `nom_zone` | str | zone hydrographique |
-| `annee`, `I2M2`, `IBD`, `IPR`, `nb_stations` | | repris de `eau_zones.parquet` |
+| `annee`, `I2M2`, `IBD`, `IPR`, `nb_stations` | | repris de `eau_zones_hydro.parquet` |
 | `surface_zone_ha` | float | surface de la zone, en hectares |
 | `part_agricole` | float | part de la zone en parcelles du RPG, en % (peut dépasser 100 % de quelques dixièmes sur le littoral, où des parcelles débordent du contour de la zone) |
 | `part_groupe_1`, … | float | part de la zone occupée par chaque groupe de cultures, en % |
@@ -204,3 +204,4 @@ Aucun.
 | 2026-11-24 | Pesticides par zone : `parcelles_zones` et `pesticides_zones` ; `base_zones` gagne les 10 molécules en kg/ha de zone | à valider |
 | 2026-11-24 | Pesticides : `pesticides.parquet` décrit tel qu'il est produit (achats par département, 10 molécules, colonnes `code_dep`, `nom_dep`, `quantite_kg`) ; `base_finale` retiré (jamais produit), remplacé par la table des doses ; maille commune = zone hydrographique × année | à valider |
 | 2026-11-24 | `champs_zones` calculé à partir de `parcelles_zones` ; `pesticides_zones` à partir des doses par département × groupe (plus de fichiers par parcelle) | à valider |
+| 2026-11-24 | Noms : suffixe `_zones` remplacé par `_zones_hydro` (`eau_zones_hydro`, `parcelles_zones_hydro`, `champs_zones_hydro`, `pesticides_zones_hydro`, `stations_zones_hydro`) ; `base_zones` renommé `base_finale` ; `champs_zones_hydro` et `pesticides_zones_hydro` calculés en mémoire, plus déposés sur la release | à valider |

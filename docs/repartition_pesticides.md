@@ -8,11 +8,11 @@ On estime la quantité (en **kg de substance active**) des **10 molécules clés
 | `src/zones_hydrographiques/constantes_cultures_molecules.py` | Les molécules utilisées par chacun des 23 groupes de cultures (`MOLECULES_PAR_GROUPE`) |
 | `src/zones_hydrographiques/calculer_doses_pesticides_groupes.py` | Dose de chaque molécule par hectare des groupes qui l'utilisent, par département et par année |
 
-`src/zones_hydrographiques/agreger_pesticides_zones.py` multiplie ensuite ces doses par la surface de chaque groupe dans chaque zone hydrographique (partie 5.2 de `main.ipynb`) :
+`src/zones_hydrographiques/agreger_pesticides_zones_hydro.py` multiplie ensuite ces doses par la surface de chaque groupe dans chaque zone hydrographique (partie 5.2 de `main.ipynb`) :
 
 ```python
 doses = calculer_doses_pesticides_groupes(parcelles, pesticides)   # parcelles_rpg_2023, pesticides.parquet
-pesticides_zones = agreger_pesticides_zones(doses, parcelles, parcelles_zones)
+pesticides_zones_hydro = agreger_pesticides_zones_hydro(doses, parcelles, parcelles_zones_hydro)
 ```
 
 ## Données en entrée

@@ -21,10 +21,10 @@ Projet Python pour la data science (ENSAE).
 ├── main.ipynb              # Notebook FINAL : raconte l'analyse, appelle les fonctions de src/
 ├── src/                    # Code réutilisable : un fichier = une fonction
 │   ├── geo/                    #   périmètre (94 départements, hors Corse), contours des départements et des zones hydrographiques
-│   ├── eau/                    #   indices biologiques : API Hub'Eau → eau_zones.parquet
+│   ├── eau/                    #   indices biologiques : API Hub'Eau → eau_zones_hydro.parquet
 │   ├── agriculture/            #   parcelles du RPG 2023 (archive IGN) → parcelles_rpg_2023.parquet ; constantes_rpg.py = libellés des cultures
 │   ├── pesticides/             #   achats des 10 molécules par département → pesticides.parquet
-│   ├── zones_hydrographiques/  #   croisement : parcelles, cultures et pesticides par zone hydrographique, puis fusion avec l'eau → base_zones.parquet
+│   ├── zones_hydrographiques/  #   croisement : parcelles, cultures et pesticides par zone hydrographique, puis fusion avec l'eau → base_finale.parquet
 │   ├── visualisation/          #   statistiques descriptives, graphiques et cartes
 │   └── telecharger_donnee.py   #   récupère un fichier déjà calculé depuis la release
 ├── notebooks/
@@ -42,11 +42,11 @@ Projet Python pour la data science (ENSAE).
 
 **La chaîne :**
 
-1. **Chaque source à part** : `src/eau/` → `eau_zones.parquet`, `src/agriculture/` → `parcelles_rpg_2023.parquet`, `src/pesticides/` → `pesticides.parquet`.
+1. **Chaque source à part** : `src/eau/` → `eau_zones_hydro.parquet`, `src/agriculture/` → `parcelles_rpg_2023.parquet`, `src/pesticides/` → `pesticides.parquet`.
 2. **Croisement dans `src/zones_hydrographiques/`** :
-   - parcelles → zones hydrographiques (`associer_parcelles_zones` → `parcelles_zones.parquet`) → surface de chaque culture par zone (`agreger_champs_zones` → `champs_zones.parquet`) ;
-   - achats répartis entre les cultures qui utilisent chaque molécule (`calculer_doses_pesticides_groupes`) → pesticides par zone (`agreger_pesticides_zones` → `pesticides_zones.parquet`) ;
-   - fusion avec les indices de l'eau (`fusionner_eau_cultures_pesticides` → `base_zones.parquet`).
+   - parcelles → zones hydrographiques (`associer_parcelles_zones_hydro` → `parcelles_zones_hydro.parquet`) → surface de chaque culture par zone (`agreger_champs_zones_hydro`, en mémoire) ;
+   - achats répartis entre les cultures qui utilisent chaque molécule (`calculer_doses_pesticides_groupes`) → pesticides par zone (`agreger_pesticides_zones_hydro`, en mémoire) ;
+   - fusion avec les indices de l'eau (`fusionner_eau_cultures_pesticides` → `base_finale.parquet`).
 3. **Analyse et cartes** dans `main.ipynb`.
 
 ## Installation
@@ -59,7 +59,7 @@ pip install -r requirements.txt
 
 ## Récupérer les données déjà calculées
 
-Les fichiers de `main.ipynb` sont sur la release [`donnees-v1`](https://github.com/raphaelcoic/Projet_python_data_science/releases/tag/donnees-v1). Pour la partie eau, seule la table finale `eau_zones.parquet` (indices agrégés par zone hydrographique) y est : les stations et les indices sont demandés directement à l'API Hub'Eau. Chaque fichier de la release passe par `telecharger_donnee(chemin, creer)`, qui suit cet ordre :
+Les fichiers de `main.ipynb` sont sur la release [`donnees-v1`](https://github.com/raphaelcoic/Projet_python_data_science/releases/tag/donnees-v1). Pour la partie eau, seule la table finale `eau_zones_hydro.parquet` (indices agrégés par zone hydrographique) y est : les stations et les indices sont demandés directement à l'API Hub'Eau. Pour le croisement, seuls `parcelles_zones_hydro.parquet` (environ 25 minutes de calcul) et `base_finale.parquet` y sont : les cultures et les pesticides par zone se recalculent en quelques secondes. Chaque fichier de la release passe par `telecharger_donnee(chemin, creer)`, qui suit cet ordre :
 
 1. Si le fichier existe en local, il est utilisé.
 2. Sinon, il est téléchargé depuis la release, sans compte GitHub.
@@ -68,9 +68,9 @@ Les fichiers de `main.ipynb` sont sur la release [`donnees-v1`](https://github.c
 ```python
 from src.telecharger_donnee import telecharger_donnee
 
-zones = gpd.read_parquet(telecharger_donnee("data/geo/zones_hydro.parquet", recuperer_zones_hydro))
-eau_zones = pd.read_parquet(telecharger_donnee("data/processed/eau_zones.parquet", lambda: construire_eau_zones(zones)))
-parcelles_zones = pd.read_parquet(telecharger_donnee("data/processed/parcelles_zones.parquet", lambda: associer_parcelles_zones(recuperer_rpg_ign(), zones)))
+zones_hydro = gpd.read_parquet(telecharger_donnee("data/geo/zones_hydro.parquet", recuperer_zones_hydro))
+eau_zones_hydro = pd.read_parquet(telecharger_donnee("data/processed/eau_zones_hydro.parquet", lambda: construire_eau_zones_hydro(zones_hydro)))
+parcelles_zones_hydro = pd.read_parquet(telecharger_donnee("data/processed/parcelles_zones_hydro.parquet", lambda: associer_parcelles_zones_hydro(recuperer_rpg_ign(), zones_hydro)))
 ```
 
 L'archive du RPG de l'IGN (2,75 Go) n'est pas dans la release : elle dépasse la limite de 2 Go par fichier de GitHub, et l'IGN l'héberge déjà. `recuperer_rpg_ign()` la télécharge dans `data/raw/rpg_ign/`. La table à la parcelle qui en est tirée, sans les contours (`parcelles_rpg_2023.parquet`), est dans la release.
@@ -85,12 +85,12 @@ Les noms de fichiers doivent être uniques dans la release. Si le code qui produ
 | Champs | `construire_parcelles_rpg(recuperer_rpg_ign(), recuperer_departements())` (archive RPG 2023 de l'IGN, 2,75 Go ; une ligne par parcelle, pour lier aux ventes de molécules) | `data/processed/parcelles_rpg_2023.parquet` |
 | Pesticides | `preparer_pesticides()` (télécharge le CSV dans `data/raw/`, garde les 10 molécules) | `data/processed/pesticides.parquet` |
 | Zones | `recuperer_zones_hydro()` | `data/geo/zones_hydro.parquet` |
-| | `rattacher_stations_zones(stations, zones)` | en mémoire (`stations_zones`) |
-| | `construire_eau_zones(zones)` : appelle l'API, nettoie, rattache aux zones et agrège (seul fichier eau de la release) | `data/processed/eau_zones.parquet` |
-| | `associer_parcelles_zones(recuperer_rpg_ign(), zones)` (archive RPG 2023 de l'IGN, environ 25 min) | `data/processed/parcelles_zones.parquet` |
-| | `agreger_champs_zones(parcelles, parcelles_zones)` (quelques secondes) | `data/processed/champs_zones.parquet` |
-| | `agreger_pesticides_zones(calculer_doses_pesticides_groupes(parcelles, pesticides), parcelles, parcelles_zones)` (quelques secondes) | `data/processed/pesticides_zones.parquet` |
-| | `fusionner_eau_cultures_pesticides(eau_zones, champs_zones, pesticides_zones, zones)` | `data/processed/base_zones.parquet` |
+| | `rattacher_stations_zones_hydro(stations, zones_hydro)` | en mémoire (`stations_zones_hydro`) |
+| | `construire_eau_zones_hydro(zones_hydro)` : appelle l'API, nettoie, rattache aux zones et agrège (seul fichier eau de la release) | `data/processed/eau_zones_hydro.parquet` |
+| | `associer_parcelles_zones_hydro(recuperer_rpg_ign(), zones_hydro)` (archive RPG 2023 de l'IGN, environ 25 min) | `data/processed/parcelles_zones_hydro.parquet` |
+| | `agreger_champs_zones_hydro(parcelles, parcelles_zones_hydro)` (quelques secondes) | en mémoire (`champs_zones_hydro`) |
+| | `agreger_pesticides_zones_hydro(calculer_doses_pesticides_groupes(parcelles, pesticides), parcelles, parcelles_zones_hydro)` (quelques secondes) | en mémoire (`pesticides_zones_hydro`) |
+| | `fusionner_eau_cultures_pesticides(eau_zones_hydro, champs_zones_hydro, pesticides_zones_hydro, zones_hydro)` | `data/processed/base_finale.parquet` |
 
 ## Règles de travail en groupe
 
@@ -107,8 +107,8 @@ Les noms de fichiers doivent être uniques dans la release. Si le code qui produ
 | Étape | Membre A — Eau | Membre B — Champs | Membre C — Pesticides |
 |---|---|---|---|
 | Nom | _…_ | _…_ | _…_ |
-| 1. Collecte (en parallèle) | `src/eau/` → `eau_zones.parquet` | `src/agriculture/` → `parcelles_rpg_2023.parquet` | `src/pesticides/` → `pesticides.parquet` |
-| 2. Jointure (une personne) | `src/zones_hydrographiques/` → `base_zones.parquet` | | |
+| 1. Collecte (en parallèle) | `src/eau/` → `eau_zones_hydro.parquet` | `src/agriculture/` → `parcelles_rpg_2023.parquet` | `src/pesticides/` → `pesticides.parquet` |
+| 2. Jointure (une personne) | `src/zones_hydrographiques/` → `base_finale.parquet` | | |
 | 3. Stats descriptives (en parallèle) | qualité de l'eau | surfaces et cultures | achats de pesticides |
 
 Le croisement eau × champs × pesticides se fait à trois, puis une seule personne assemble `main.ipynb`.
