@@ -11,7 +11,7 @@ Projet Python pour la data science (ENSAE).
 | Indices biologiques des cours d'eau (I2M2, IBD, IPR) | [Hub'Eau – Hydrobiologie](https://hubeau.eaufrance.fr/page/api-hydrobiologie) |
 | Stations hydrobiologiques (coordonnées) | [Hub'Eau – Hydrobiologie](https://hubeau.eaufrance.fr/page/api-hydrobiologie) |
 | Zones hydrographiques | [BD TOPAGE](https://www.sandre.eaufrance.fr/atlas/srv/fre/catalog.search#/home) (Sandre), via son WFS |
-| Achats de produits phytosanitaires par département | CSV data.gouv.fr (lien exact à ajouter) |
+| Achats de produits phytosanitaires par département | [CSV data.gouv.fr](https://www.data.gouv.fr/api/1/datasets/r/6f664bd4-f27d-4e33-8ca7-c197c6adf217) (BNV-D, quantités en kg) |
 | Parcelles agricoles | [RPG](https://www.data.gouv.fr/datasets/rpg) (IGN / ASP), archive nationale 2023 de l'IGN |
 | Fonds de carte | [france-geojson](https://github.com/gregoiredavid/france-geojson) |
 
@@ -24,6 +24,7 @@ Projet Python pour la data science (ENSAE).
 │   ├── pesticides/         #   achats de pesticides
 │   ├── agriculture/        #   parcelles agricoles du RPG (archive IGN) ; constantes_rpg.py = libellés des cultures
 │   ├── geo/                #   périmètre (94 départements, hors Corse) et fonds de carte
+│   ├── agregation/         #   pesticides attribués à chaque parcelle, par année (voir son README)
 │   ├── nettoyage/          #   nettoyage, agrégation, fusion
 │   ├── visualisation/      #   graphiques et cartes
 │   └── telecharger_donnee.py #  récupère un fichier déjà calculé depuis la release
@@ -61,7 +62,7 @@ from src.telecharger_donnee import telecharger_donnee
 
 zones = gpd.read_parquet(telecharger_donnee("data/geo/zones_hydro.parquet", recuperer_zones_hydro))
 eau_zones = pd.read_parquet(telecharger_donnee("data/processed/eau_zones.parquet", lambda: construire_eau_zones(zones)))
-champs_zones = pd.read_parquet(telecharger_donnee("data/processed/champs_zones.parquet", lambda: agreger_champs_zones(recuperer_rpg_ign(), zones), recalculer=True))  # régénère
+champs_zones = pd.read_parquet(telecharger_donnee("data/processed/champs_zones.parquet", lambda: agreger_champs_zones(recuperer_rpg_ign(), zones)))
 ```
 
 L'archive du RPG de l'IGN (2,75 Go) n'est pas dans la release : elle dépasse la limite de 2 Go par fichier de GitHub, et l'IGN l'héberge déjà. `recuperer_rpg_ign()` la télécharge dans `data/raw/rpg_ign/`. La table à la parcelle qui en est tirée, sans les contours (`parcelles_rpg_2023.parquet`), est dans la release.
@@ -74,7 +75,7 @@ Les noms de fichiers doivent être uniques dans la release. Si le code qui produ
 |---|---|---|
 | Eau | `recuperer_toutes_stations_hydrobio()`, `recuperer_tous_indices()` (API Hub'Eau, plusieurs minutes) | en mémoire |
 | Champs | `construire_parcelles_rpg(recuperer_rpg_ign(), recuperer_departements())` (archive RPG 2023 de l'IGN, 2,75 Go ; une ligne par parcelle, pour lier aux ventes de molécules) | `data/processed/parcelles_rpg_2023.parquet` |
-| Pesticides | télécharger le CSV dans `data/raw/` | |
+| Pesticides | `preparer_pesticides()` (télécharge le CSV dans `data/raw/`, garde les 10 molécules) | `data/processed/pesticides.parquet` |
 | Zones | `recuperer_zones_hydro()` | `data/geo/zones_hydro.parquet` |
 | | `rattacher_stations_zones(stations, zones)` | en mémoire (`stations_zones`) |
 | | `agreger_champs_zones(recuperer_rpg_ign(), zones)` (archive RPG 2023 de l'IGN, 2,75 Go, environ 30 min) | `data/processed/champs_zones.parquet` |
