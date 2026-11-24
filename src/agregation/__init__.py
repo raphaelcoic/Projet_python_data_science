@@ -1,6 +1,6 @@
-"""Pipelines d'agrégation et de croisement de données du projet.
+"""Attribution des achats de pesticides aux cultures.
 
-Sous-modules :
-- ``src/agregation/parcelles_pesticides/`` : ventilation annuelle des achats de pesticides
-  (10 molécules clés, 2013–2023) à la maille des parcelles RPG 2023.
+Sous-module :
+- ``src/agregation/parcelles_pesticides/`` : les 10 molécules suivies, les groupes de cultures du RPG
+  qui les utilisent, et la dose de chaque molécule par hectare de ces groupes, par département et par année.
 """

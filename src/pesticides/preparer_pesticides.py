@@ -2,22 +2,9 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.agregation.parcelles_pesticides.constantes_agregation import MOLECULES
 from src.pesticides.recuperer_pesticides import recuperer_pesticides
 
-
-# Liste des 10 molécules retenues
-SUBSTANCES_SELECTIONNEES = [
-    "glyphosate",
-    "s-metolachlore",
-    "isoproturon",
-    "chlorotoluron",
-    "cuivre",
-    "boscalid",
-    "tebuconazole",
-    "imidaclopride",
-    "cypermethrine",
-    "chlorpyriphos-ethyl",
-]
 
 # Les 8 sels de cuivre présents dans la base BNV-D regroupés sous le libellé "cuivre"
 VARIANTES_CUIVRE = [
@@ -36,8 +23,8 @@ def preparer_pesticides(actualiser=False):
     """Télécharge les données brutes, les nettoie et enregistre le résultat.
 
     actualiser : True pour retélécharger le CSV même s'il est déjà dans data/raw/.
-    Renvoie un DataFrame (geocode_departement, libelle_departement, annee, substance,
-    quantite_totale en kg), aussi enregistré dans data/processed/pesticides.parquet.
+    Renvoie un DataFrame (code_dep, nom_dep, annee, substance, quantite_kg), une ligne par
+    département, année et molécule, aussi enregistré dans data/processed/pesticides.parquet.
     """
 
     # 1. Récupérer les données brutes (télécharge si absent ou si actualiser=True)
@@ -65,7 +52,7 @@ def preparer_pesticides(actualiser=False):
 
     # 4. Conservation des 10 molécules sélectionnées
     df = df[
-        df["substance"].isin(SUBSTANCES_SELECTIONNEES)
+        df["substance"].isin(MOLECULES)
     ]
 
     # 5. Agrégation des quantités (biocontrôle + hors biocontrôle)
@@ -74,7 +61,8 @@ def preparer_pesticides(actualiser=False):
             ["geocode_departement", "libelle_departement", "annee", "substance"],
             as_index=False
         )
-        .agg(quantite_totale=("valeur", "sum"))
+        .agg(quantite_kg=("valeur", "sum"))
+        .rename(columns={"geocode_departement": "code_dep", "libelle_departement": "nom_dep"})
     )
 
     # 6. Enregistrement du fichier nettoyé
@@ -84,6 +72,6 @@ def preparer_pesticides(actualiser=False):
 
     print(f"Fichier nettoyé enregistré : {chemin_sortie}")
     print(f"Dimensions : {df_pesticides.shape}")
-    print(f"Molécules sélectionnées : {SUBSTANCES_SELECTIONNEES}")
+    print(f"Molécules sélectionnées : {MOLECULES}")
 
     return df_pesticides

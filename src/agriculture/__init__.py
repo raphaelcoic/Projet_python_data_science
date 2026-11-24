@@ -5,8 +5,8 @@ téléchargement de l'archive (recuperer_rpg_ign), lecture par paquets (lire_par
 département de chaque parcelle (src/geo/rattacher_departements.py), retrait des doublons et des
 surfaces nulles (nettoyer_parcelles_rpg), libellés (ajouter_libelles_rpg) ; construire_parcelles_rpg
 enchaîne ces étapes.
-L'agrégation des parcelles aux zones hydrographiques, avec leurs contours, est dans
-src/nettoyage/agreger_champs_zones.py.
+Le rattachement des parcelles aux zones hydrographiques, avec leurs contours, est dans
+src/nettoyage/associer_parcelles_zones.py.
 Les référentiels (groupes, catégories, nomenclature des cultures) sont dans constantes_rpg.py.
 
 Règle : un fichier = une fonction, nommé comme la fonction.

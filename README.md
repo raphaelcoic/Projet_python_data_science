@@ -24,7 +24,7 @@ Projet Python pour la data science (ENSAE).
 │   ├── pesticides/         #   achats de pesticides
 │   ├── agriculture/        #   parcelles agricoles du RPG (archive IGN) ; constantes_rpg.py = libellés des cultures
 │   ├── geo/                #   périmètre (94 départements, hors Corse) et fonds de carte
-│   ├── agregation/         #   pesticides attribués à chaque parcelle, par année (voir son README)
+│   ├── agregation/         #   les 10 molécules, leurs groupes de cultures et les doses par hectare (voir son README)
 │   ├── nettoyage/          #   nettoyage, agrégation, fusion
 │   ├── visualisation/      #   graphiques et cartes
 │   └── telecharger_donnee.py #  récupère un fichier déjà calculé depuis la release
@@ -62,7 +62,7 @@ from src.telecharger_donnee import telecharger_donnee
 
 zones = gpd.read_parquet(telecharger_donnee("data/geo/zones_hydro.parquet", recuperer_zones_hydro))
 eau_zones = pd.read_parquet(telecharger_donnee("data/processed/eau_zones.parquet", lambda: construire_eau_zones(zones)))
-champs_zones = pd.read_parquet(telecharger_donnee("data/processed/champs_zones.parquet", lambda: agreger_champs_zones(recuperer_rpg_ign(), zones)))
+parcelles_zones = pd.read_parquet(telecharger_donnee("data/processed/parcelles_zones.parquet", lambda: associer_parcelles_zones(recuperer_rpg_ign(), zones)))
 ```
 
 L'archive du RPG de l'IGN (2,75 Go) n'est pas dans la release : elle dépasse la limite de 2 Go par fichier de GitHub, et l'IGN l'héberge déjà. `recuperer_rpg_ign()` la télécharge dans `data/raw/rpg_ign/`. La table à la parcelle qui en est tirée, sans les contours (`parcelles_rpg_2023.parquet`), est dans la release.
@@ -78,11 +78,10 @@ Les noms de fichiers doivent être uniques dans la release. Si le code qui produ
 | Pesticides | `preparer_pesticides()` (télécharge le CSV dans `data/raw/`, garde les 10 molécules) | `data/processed/pesticides.parquet` |
 | Zones | `recuperer_zones_hydro()` | `data/geo/zones_hydro.parquet` |
 | | `rattacher_stations_zones(stations, zones)` | en mémoire (`stations_zones`) |
-| | `agreger_champs_zones(recuperer_rpg_ign(), zones)` (archive RPG 2023 de l'IGN, 2,75 Go, environ 30 min) | `data/processed/champs_zones.parquet` |
 | | `construire_eau_zones(zones)` : appelle l'API, nettoie, rattache aux zones et agrège (seul fichier eau de la release) | `data/processed/eau_zones.parquet` |
 | | `associer_parcelles_zones(recuperer_rpg_ign(), zones)` (archive RPG 2023 de l'IGN, environ 25 min) | `data/processed/parcelles_zones.parquet` |
-| | `python -m src.agregation.parcelles_pesticides.construire_parcelles_pesticides` (pesticides par parcelle, de Tomia) | `data/processed/parcelles_pesticides/parcelles_pesticides_<annee>.parquet` |
-| | `agreger_pesticides_zones(parcelles_pesticides, parcelles_zones)`, pour chaque année | `data/processed/pesticides_zones.parquet` |
+| | `agreger_champs_zones(parcelles, parcelles_zones)` (quelques secondes) | `data/processed/champs_zones.parquet` |
+| | `agreger_pesticides_zones(calculer_doses_pesticides_groupes(parcelles, pesticides), parcelles, parcelles_zones)` (quelques secondes) | `data/processed/pesticides_zones.parquet` |
 | | `construire_base_zones(eau_zones, champs_zones, pesticides_zones, zones)` | `data/processed/base_zones.parquet` |
 
 ## Règles de travail en groupe
@@ -101,7 +100,7 @@ Les noms de fichiers doivent être uniques dans la release. Si le code qui produ
 |---|---|---|---|
 | Nom | _…_ | _…_ | _…_ |
 | 1. Collecte (en parallèle) | `src/hubeau/` → `eau_zones.parquet` | `src/agriculture/` → `parcelles_rpg_2023.parquet` | `src/pesticides/` → `pesticides.parquet` |
-| 2. Jointure (une personne) | `src/nettoyage/` → `base_finale.parquet` | | |
+| 2. Jointure (une personne) | `src/nettoyage/` → `base_zones.parquet` | | |
 | 3. Stats descriptives (en parallèle) | qualité de l'eau | surfaces et cultures | achats de pesticides |
 
 Le croisement eau × champs × pesticides se fait à trois, puis une seule personne assemble `main.ipynb`.

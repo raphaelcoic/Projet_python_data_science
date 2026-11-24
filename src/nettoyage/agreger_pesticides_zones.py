@@ -1,13 +1,23 @@
-def agreger_pesticides_zones(parcelles_pesticides, parcelles_zones):
-    """Somme par zone hydrographique et par année les quantités de pesticides attribuées aux parcelles.
+from src.agregation.parcelles_pesticides.constantes_agregation import LISTE_COLONNES_MOLECULES, MOLECULES
 
-    parcelles_pesticides : DataFrame d'un ou plusieurs fichiers parcelles_pesticides_<annee>.parquet
-    (id_parcelle, annee et les colonnes *_kg).
+
+def agreger_pesticides_zones(doses, parcelles, parcelles_zones):
+    """Quantités de pesticides attribuées à chaque zone hydrographique, par année.
+
+    doses : DataFrame renvoyé par calculer_doses_pesticides_groupes.
+    parcelles : DataFrame de parcelles_rpg_2023.parquet (id_parcelle, code_dep, libelle_groupe, surface_ha).
     parcelles_zones : DataFrame renvoyé par associer_parcelles_zones.
-    Une parcelle partagée entre plusieurs zones donne à chacune sa part des quantités.
-    Renvoie un DataFrame : code_zone, annee et les colonnes *_kg (en kg de substance active).
+    Une parcelle reçoit dose × surface, et une parcelle partagée entre plusieurs zones en donne à
+    chacune sa part. Comme la dose ne dépend que du département et du groupe de cultures, on somme
+    d'abord les surfaces de chaque zone par département et groupe, puis on les multiplie par les doses.
+    Renvoie un DataFrame : code_zone, annee et une colonne par molécule (glyphosate_kg, ..., en kg de substance active).
     """
-    colonnes = [c for c in parcelles_pesticides.columns if c.endswith("_kg")]
-    lignes = parcelles_pesticides.merge(parcelles_zones, on="id_parcelle")
-    lignes[colonnes] = lignes[colonnes].mul(lignes["part"], axis=0)
-    return lignes.groupby(["code_zone", "annee"], as_index=False)[colonnes].sum().astype({"annee": "int64"})
+    surfaces = parcelles_zones.merge(parcelles[["id_parcelle", "code_dep", "libelle_groupe", "surface_ha"]], on="id_parcelle")
+    surfaces["surface_ha"] *= surfaces["part"]
+    surfaces = surfaces.groupby(["code_zone", "code_dep", "libelle_groupe"], as_index=False)["surface_ha"].sum()
+    lignes = surfaces.merge(doses, on=["code_dep", "libelle_groupe"])
+    lignes["kg"] = lignes["surface_ha"] * lignes["dose_kg_ha"]
+    kg = lignes.pivot_table(index=["code_zone", "annee"], columns="molecule", values="kg", aggfunc="sum", fill_value=0)
+    kg = kg.reindex(columns=MOLECULES, fill_value=0)
+    kg.columns = LISTE_COLONNES_MOLECULES
+    return kg.reset_index().astype({"annee": "int64"})
