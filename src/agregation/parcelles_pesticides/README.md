@@ -1,18 +1,82 @@
 # Pipeline d'agrégation : Parcelles RPG 2023 × Achats de pesticides (2013–2023)
 
-Ce module croise les parcelles agricoles du **RPG 2023**, les **achats départementaux de produits phytosanitaires (BNV-D, 2013–2023)** et la **table de correspondance groupes de cultures × molécules** afin d'estimer, pour chaque parcelle et chaque année, la quantité (en **kg de substance active**) des **10 molécules clés** attribuée à cette parcelle.
+Ce sous-module (`src/agregation/parcelles_pesticides/`) croise les parcelles agricoles du **RPG 2023**, les **achats départementaux de produits phytosanitaires (BNV-D, 2013–2023)** et la **table de correspondance groupes de cultures × molécules** afin d'estimer, pour chaque parcelle et chaque année, la quantité (en **kg de substance active**) des **10 molécules clés** attribuée à cette parcelle.
 
 Pour éviter de manipuler un monolithe de plus de 107 millions de lignes en mémoire, le pipeline produit **une table Parquet par année** (`parcelles_pesticides_2013.parquet` à `parcelles_pesticides_2023.parquet`), générée en lecture/écriture par lots (*streaming*).
 
 ---
 
-## 1. Données en entrée
+## 1. Ordre d'exécution du pipeline complet
+
+Toutes les commandes ci-dessous s'exécutent **depuis la racine du dépôt**.
+
+### Vue d'ensemble de la chaîne
+
+```text
+1. Parcelles RPG 2023        ──► data/processed/parcelles_rpg_2023.parquet
+2. Achats de pesticides      ──► data/raw/...csv ──► data/processed/pesticides.parquet
+3. Correspondance cultures   ──► data/processed/correspondance_groupes_molecules.csv
+        │
+        ▼
+4. Pipeline d'agrégation (src/agregation/parcelles_pesticides/) :
+   a. charger_matrice_correspondance.py       (matrice binaire 23 × 10)
+   b. calculer_doses_pesticides_groupes.py    ──► data/processed/doses_pesticides_groupes.parquet
+   c. construire_parcelles_pesticides_annee.py (appelé pour chaque année par l'orchestrateur)
+   d. construire_parcelles_pesticides.py      ──► data/processed/parcelles_pesticides/parcelles_pesticides_<annee>.parquet
+```
+
+### Exécution pas à pas (de zéro)
+
+#### Étape 1 — Récupérer `data/processed/parcelles_rpg_2023.parquet`
+Télécharge le fichier pré-calculé depuis la release GitHub `donnees-v1` (ou le recalcule depuis l'archive IGN via `src/agriculture/construire_parcelles_rpg.py` s'il n'y est pas) :
+
+```bash
+python -c "from src.telecharger_donnee import telecharger_donnee; from src.agriculture.construire_parcelles_rpg import construire_parcelles_rpg; from src.agriculture.recuperer_rpg_ign import recuperer_rpg_ign; from src.geo.recuperer_departements import recuperer_departements; telecharger_donnee('data/processed/parcelles_rpg_2023.parquet', lambda: construire_parcelles_rpg(recuperer_rpg_ign(), recuperer_departements()))"
+```
+
+#### Étape 2 — Télécharger et préparer `data/processed/pesticides.parquet`
+Appelle `src/pesticides/recuperer_pesticides.py` (CSV brut dans `data/raw/`) puis `src/pesticides/preparer_pesticides.py` (exclusion Corse/DROM, regroupement des 8 sels de cuivre sous `"cuivre"`, filtre sur les 10 molécules clés) :
+
+```bash
+python -c "from src.pesticides.preparer_pesticides import preparer_pesticides; preparer_pesticides()"
+```
+
+#### Étape 3 — Vérifier la présence de la table de correspondance
+Le fichier `data/processed/correspondance_groupes_molecules.csv` est produit par le notebook `notebooks/exploration/tf_correspondance_groupes_molecules.ipynb`. S'il est absent, exécuter ce notebook au préalable.
+
+#### Étape 4 — Lancer l'agrégation parcelles × pesticides (génère les 11 tables Parquet annuelles)
+L'orchestrateur `construire_parcelles_pesticides.py` exécute automatiquement dans l'ordre :
+1. `charger_matrice_correspondance.py`
+2. `calculer_doses_pesticides_groupes.py` → produit `data/processed/doses_pesticides_groupes.parquet`
+3. `construire_parcelles_pesticides_annee.py` pour chaque année → produit `data/processed/parcelles_pesticides/parcelles_pesticides_<annee>.parquet`
+
+```bash
+# Générer toutes les années (2013 à 2023)
+python -m src.agregation.parcelles_pesticides.construire_parcelles_pesticides
+
+# Ou générer uniquement certaines années (ex. 2022 et 2023)
+python -m src.agregation.parcelles_pesticides.construire_parcelles_pesticides --annees 2022 2023
+```
+
+### Lecture d'une table annuelle en Python
+
+```python
+import pandas as pd
+
+df_2023 = pd.read_parquet("data/processed/parcelles_pesticides/parcelles_pesticides_2023.parquet")
+```
+
+---
+
+## 2. Données en entrée
 
 | Fichier | Maille | Rôle dans le pipeline |
 |---|---|---|
 | `data/processed/parcelles_rpg_2023.parquet` | 1 ligne par parcelle (`9 742 907` lignes, 94 départements continentaux) | Fournit `id_parcelle`, `code_dep`, `nom_dep`, `surface_ha`, `code_groupe`, `libelle_groupe` (les colonnes `code_culture` et `categorie_culture` sont retirées en sortie). |
-| `data/processed/pesticides.parquet` | `geocode_departement` × `annee` × `substance` (2013–2023) | Fournit la quantité achetée $Q_{d,t,m}$ (en kg de substance active) pour les 10 molécules retenues (dont le `cuivre`, obtenu par agrégation de ses 8 sels). |
+| `data/processed/pesticides.parquet` | `geocode_departement` × `annee` × `substance` (2013–2023) | Fournit la quantité achetée $Q_{d,t,m}$ (en **kg** de substance active) pour les 10 molécules retenues (dont le `cuivre`, obtenu par agrégation de ses 8 sels). |
 | `data/processed/correspondance_groupes_molecules.csv` | 23 groupes RPG × 10 molécules | Définit quels groupes de cultures utilisent chaque molécule ($I_{g,m} \in \{0, 1\}$). |
+
+> **Remarque importante sur l'unité des achats BNV-D** : la description textuelle du jeu de données sur data.gouv.fr mentionne « en tonnes », mais les valeurs numériques du fichier CSV départemental sont bien en **kilogrammes (kg)** (ex. total national 2023 ≈ `63,8 millions`, soit ~63 800 tonnes toutes substances ; glyphosate 2023 ≈ `6,67 millions`, soit ~6 674 tonnes). Aucune conversion n'est appliquée et les colonnes de sortie sont suffixées en `_kg`.
 
 ### Les 10 molécules suivies
 
@@ -22,7 +86,7 @@ Pour éviter de manipuler un monolithe de plus de 107 millions de lignes en mém
 
 ---
 
-## 2. Modèle mathématique d'allocation
+## 3. Modèle mathématique d'allocation
 
 ### Notations
 
@@ -71,28 +135,28 @@ où $D_{d, t, m, g} = I_{g, m} \dfrac{Q_{d, t, m}}{S_{d, m}^{\text{elig}}}$ repr
 
 ---
 
-## 3. Gestion de la mémoire et architecture du code
+## 4. Gestion de la mémoire et organisation des scripts
 
 Le produit cartésien complet représente $9\,742\,907 \times 11 = 107\,171\,977$ lignes. Pour éviter toute saturation de la RAM (~10–15 Go en `pandas` naïf) :
 
 1. **Factorisation préalable** : la table intermédiaire `data/processed/doses_pesticides_groupes.parquet` ne compte que $94 \times 11 \times 23 = 23\,782$ lignes (< 1 Mo) et pré-calcule toutes les doses $D_{d, t, m, g}$.
-2. **Une table Parquet par année** : chaque année est stockée dans son propre fichier `data/processed/parcelles_pesticides/parcelles_pesticides_<annee>.parquet` (plus simple à charger et filtrer dans la suite du projet).
-3. **Traitement par lots (*streaming*)** : `parcelles_rpg_2023.parquet` est lu par paquets de `500 000` parcelles via `pyarrow.parquet.ParquetFile.iter_batches`, multiplié de façon vectorisée en `float64` sur une grille dense `(94 × 23 × 10)`, converti en `float32` et écrit directement sur disque via `pyarrow.parquet.ParquetWriter` (compression `zstd` + encodage dictionnaire). L'empreinte mémoire reste ainsi inférieure à **~250 Mo** pendant toute l'exécution.
+2. **Une table Parquet par année** : chaque année est stockée dans son propre fichier `data/processed/parcelles_pesticides/parcelles_pesticides_<annee>.parquet` (~133 à 165 Mo/fichier).
+3. **Traitement par lots (*streaming*)** : `parcelles_rpg_2023.parquet` est lu par paquets de `500 000` parcelles via `pyarrow.parquet.ParquetFile.iter_batches`, multiplié de façon vectorisée en `float64` sur une grille dense `(94 × 23 × 10)`, converti en `float32` et écrit directement sur disque via `pyarrow.parquet.ParquetWriter` (compression `zstd` + encodage dictionnaire). L'empreinte mémoire reste inférieure à **~250 Mo** pendant toute l'exécution.
 4. **Écriture atomique** : chaque fichier est d'abord écrit sous `.parquet.tmp` puis renommé, garantissant l'absence de fichier corrompu en cas d'interruption.
 
-### Organisation des fichiers dans `src/agregation/`
+### Fichiers dans `src/agregation/parcelles_pesticides/`
 
-| Fichier | Rôle |
-|---|---|
-| `constantes_agregation.py` | Chemins par défaut, colonnes conservées et mapping des 10 colonnes `*_kg`. |
-| `charger_matrice_correspondance.py` | Parse `correspondance_groupes_molecules.csv` en matrice binaire `23 × 10`. |
-| `calculer_doses_pesticides_groupes.py` | Agrège les surfaces $S_{d,g}$ par lots, calcule les doses $D_{d,t,m,g}$ et journalise les quantités non allouables. |
-| `construire_parcelles_pesticides_annee.py` | Génère un fichier annuel `parcelles_pesticides_<annee>.parquet` en streaming et calcule les métriques de contrôle qualité. |
-| `construire_parcelles_pesticides.py` | Orchestrateur complet (CLI + fonction Python) qui génère toutes les années demandées et vérifie la conservation de masse. |
+| Ordre | Fichier | Rôle |
+|---|---|---|
+| 0 | `constantes_agregation.py` | Chemins par défaut, colonnes conservées et mapping des 10 colonnes `*_kg`. |
+| 1 | `charger_matrice_correspondance.py` | Parse `correspondance_groupes_molecules.csv` en matrice binaire `23 × 10`. |
+| 2 | `calculer_doses_pesticides_groupes.py` | Agrège les surfaces $S_{d,g}$ par lots, calcule les doses $D_{d,t,m,g}$ et journalise les quantités non allouables. |
+| 3 | `construire_parcelles_pesticides_annee.py` | Génère un fichier annuel `parcelles_pesticides_<annee>.parquet` en streaming et calcule les métriques de contrôle qualité. |
+| 4 | `construire_parcelles_pesticides.py` | Orchestrateur complet (CLI + fonction Python) qui enchaîne les étapes 1 → 3 pour toutes les années demandées et vérifie la conservation de masse. |
 
 ---
 
-## 4. Schéma des tables produites
+## 5. Schéma des tables produites
 
 ### Table intermédiaire : `data/processed/doses_pesticides_groupes.parquet`
 - **Clé** : `(code_dep, annee, libelle_groupe)` — `23 782` lignes.
@@ -106,7 +170,7 @@ Le produit cartésien complet représente $9\,742\,907 \times 11 = 107\,171\,977
 
 ---
 
-## 5. Cas limites traités
+## 6. Cas limites traités
 
 - **Sels de cuivre** : dans `src/pesticides/preparer_pesticides.py`, les 8 formes de cuivre présentes dans la BNV-D sont regroupées sous `"cuivre"` avant agrégation.
 - **Départements sans surface éligible ($S_{d, m}^{\text{elig}} = 0$)** :
@@ -114,28 +178,3 @@ Le produit cartésien complet représente $9\,742\,907 \times 11 = 107\,171\,977
   - `92` (Hauts-de-Seine) : aucune parcelle éligible pour `s-metolachlore` et `cuivre`.
   - Les doses correspondantes sont fixées à `0.0` (aucune division par zéro / `NaN` / `inf`), et le tonnage non allouable est comptabilisé séparément dans le bilan de contrôle.
 - **Molécules retirées ou sans achat sur une année** (ex. `isoproturon` après 2017, `imidaclopride` après 2018, `chlorpyriphos-ethyl` après 2020) : l'absence de ligne d'achat dans la BNV-D est interprétée comme `0.0 kg`.
-
----
-
-## 6. Utilisation
-
-Depuis la racine du dépôt :
-
-```bash
-# 1. (Si besoin) Régénérer pesticides.parquet avec les 10 molécules (incluant les 8 sels de cuivre)
-python -c "from src.pesticides.preparer_pesticides import preparer_pesticides; preparer_pesticides()"
-
-# 2. Générer toutes les tables annuelles (2013 à 2023)
-python -m src.agregation.construire_parcelles_pesticides
-
-# 3. Ou générer uniquement certaines années (ex. 2022 et 2023)
-python -m src.agregation.construire_parcelles_pesticides --annees 2022 2023
-```
-
-Lecture d'une année en Python :
-
-```python
-import pandas as pd
-
-df_2023 = pd.read_parquet("data/processed/parcelles_pesticides/parcelles_pesticides_2023.parquet")
-```

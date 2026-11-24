@@ -8,7 +8,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from src.agregation.constantes_agregation import (
+from src.agregation.parcelles_pesticides.constantes_agregation import (
     CHEMIN_PARCELLES_DEFAUT,
     COLONNES_MOLECULES,
     COLONNES_PARCELLES_CONSERVEES,

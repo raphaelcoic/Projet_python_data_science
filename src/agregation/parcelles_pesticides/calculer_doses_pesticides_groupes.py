@@ -6,10 +6,10 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
-from src.agregation.charger_matrice_correspondance import (
+from src.agregation.parcelles_pesticides.charger_matrice_correspondance import (
     charger_matrice_correspondance,
 )
-from src.agregation.constantes_agregation import (
+from src.agregation.parcelles_pesticides.constantes_agregation import (
     CHEMIN_CORRESPONDANCE_DEFAUT,
     CHEMIN_DOSES_DEFAUT,
     CHEMIN_PARCELLES_DEFAUT,

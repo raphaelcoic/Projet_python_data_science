@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.agregation.constantes_agregation import (
+from src.agregation.parcelles_pesticides.constantes_agregation import (
     CHEMIN_CORRESPONDANCE_DEFAUT,
     MOLECULES,
 )

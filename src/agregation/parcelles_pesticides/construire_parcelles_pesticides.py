@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.agregation.calculer_doses_pesticides_groupes import (
+from src.agregation.parcelles_pesticides.calculer_doses_pesticides_groupes import (
     calculer_doses_pesticides_groupes,
 )
-from src.agregation.constantes_agregation import (
+from src.agregation.parcelles_pesticides.constantes_agregation import (
     CHEMIN_CORRESPONDANCE_DEFAUT,
     CHEMIN_DOSES_DEFAUT,
     CHEMIN_PARCELLES_DEFAUT,
@@ -18,7 +18,7 @@ from src.agregation.constantes_agregation import (
     DOSSIER_SORTIE_DEFAUT,
     MOLECULES,
 )
-from src.agregation.construire_parcelles_pesticides_annee import (
+from src.agregation.parcelles_pesticides.construire_parcelles_pesticides_annee import (
     construire_parcelles_pesticides_annee,
 )
 
