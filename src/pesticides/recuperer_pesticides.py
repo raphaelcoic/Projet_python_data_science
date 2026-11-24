@@ -14,16 +14,16 @@ NOM_FICHIER = (
 )
 
 
-def recuperer_pesticides(dossier="data/raw"):
+def recuperer_pesticides(dossier="data/raw", actualiser=False):
     """Télécharge le fichier CSV des achats de produits phytosanitaires.
 
-    Si le fichier existe déjà, il est réutilisé.
+    Si le fichier existe déjà et actualiser est False, il est réutilisé.
     Renvoie le chemin local du fichier CSV.
     """
     dossier = Path(dossier)
     fichier = dossier / NOM_FICHIER
 
-    if fichier.exists():
+    if fichier.exists() and not actualiser:
         return fichier
 
     dossier.mkdir(parents=True, exist_ok=True)
