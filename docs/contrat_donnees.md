@@ -43,27 +43,11 @@ L'eau n'a pas de livrable au département : elle est agrégée à la zone hydrog
 
 ## 3. Livrables
 
-### A — Champs : `data/processed/champs.parquet`
+### A — Champs : `data/processed/parcelles_rpg_2023.parquet`
 
-Clé : `code_dep`, `code_groupe_culture` — **millésime RPG 2023 uniquement** : l'assolement d'un
-département change peu d'une année à l'autre, la même photo sert pour toutes les années.
-
-| Colonne | Type | Description |
-|---|---|---|
-| `code_dep` | str | département de la parcelle |
-| `code_groupe_culture` | str | code du groupe de cultures RPG (`"1"` à `"28"`) |
-| `libelle_groupe_culture` | str | libellé (blé tendre, maïs grain et ensilage, …) |
-| `surface_ha` | float | surface totale du groupe dans le département, en hectares |
-
-Produit par `src/nettoyage/agreger_champs.py` à partir de `data/processed/parcelles_rpg_2023.parquet`,
-une ligne par parcelle de l'archive nationale du RPG 2023 de l'IGN (`RPG_2-2__GPKG_LAMB93_FXX_2023-01-01`),
-construite par `src/agriculture/tabuler_parcelles_rpg.py` : chaque parcelle va au département qui contient
-un point de sa surface. On somme ensuite la surface déclarée par département et groupe de cultures.
-
-#### Table intermédiaire : `data/processed/parcelles_rpg_2023.parquet`
-
-Clé : `id_parcelle`. Une ligne par parcelle, Corse comprise, sans les contours. Sert aussi à
-lier les parcelles aux ventes de molécules.
+Clé : `id_parcelle` — **millésime RPG 2023 uniquement** : l'assolement change peu d'une année à
+l'autre, la même photo sert pour toutes les années. Une ligne par parcelle des 94 départements,
+sans les contours. Sert à lier les parcelles aux ventes de molécules.
 
 | Colonne | Type | Description |
 |---|---|---|
@@ -73,6 +57,12 @@ lier les parcelles aux ventes de molécules.
 | `code_culture` | str | code culture RPG (3 lettres) |
 | `code_groupe`, `libelle_groupe` | str | groupe de cultures RPG (`"1"` à `"28"`) et son libellé |
 | `categorie_culture` | str | `TA`, `PP`, `CP` ou `SB`, vide pour les surfaces non agricoles |
+
+Construit par `src/agriculture/construire_parcelles_rpg.py` à partir de l'archive nationale du RPG 2023
+de l'IGN (`RPG_2-2__GPKG_LAMB93_FXX_2023-01-01`) : chaque parcelle va au département qui contient
+un point de sa surface ; les parcelles de Corse sont écartées. Le nettoyage
+(`nettoyer_parcelles_rpg.py`) retire les doublons d'identifiant (aucun en 2023) et les parcelles
+de surface nulle (environ 8 500 miettes de moins de 0,005 ha).
 
 ### B — Pesticides : `data/processed/pesticides.parquet`
 
@@ -97,7 +87,7 @@ Garder **toutes** les substances (utile pour les totaux), pas seulement la liste
 Réalisée dans `src/nettoyage/` une fois les deux livrables prêts.
 
 - `pesticides` sommé par département et année (`quantite_kg` totale) via `code_dep`, `annee`
-- × `champs` passé en colonnes (une colonne de surface par groupe de cultures + `surface_agricole_ha` totale) via `code_dep` seulement (RPG 2023 pour toutes les années)
+- × surfaces par groupe de cultures, sommées par département à partir de `parcelles_rpg_2023`, via `code_dep` seulement (RPG 2023 pour toutes les années)
 
 Contrôles obligatoires : nombre de lignes avant / après chaque `merge`,
 et départements présents d'un côté mais pas de l'autre (`indicator=True`).
@@ -106,7 +96,7 @@ et départements présents d'un côté mais pas de l'autre (`indicator=True`).
 
 Le département mélange des bassins très différents. Pour croiser l'eau et les cultures,
 on passe donc par les 6 190 zones hydrographiques de la BD TOPAGE (`data/geo/zones_hydro.parquet`).
-`champs.parquet` reste au département pour le croisement avec les pesticides.
+Le croisement avec les pesticides, au département, part de `parcelles_rpg_2023.parquet`.
 
 ### `stations_zones` (en mémoire, pas de fichier)
 
@@ -170,7 +160,7 @@ une partie de l'amont reste hors de la zone.
 | | Version initiale | |
 | 2026-10-27 | Eau : indices biologiques (I2M2, IBD, IPR) à la place des molécules ; suppression de `molecules.csv` | à valider |
 | 2026-10-27 | Période élargie de 2015-2022 à 2013-2023 (période commune aux trois sources) | à valider |
-| 2026-10-27 | Corse retirée du périmètre (RPG trop incomplet en Corse, voir `tf_rpg_valeurs_manquantes_corse.ipynb`) | à valider |
+| 2026-10-27 | Corse retirée du périmètre (RPG trop incomplet en Corse) | à valider |
 | 2026-10-27 | Champs : RPG 2023 seul, clé `code_dep` × `code_groupe_culture`, jointure sur `code_dep` | à valider |
 | 2026-11-06 | Ajout du croisement eau × cultures par zone hydrographique (`stations_zones`, `champs_zones`, `base_zones`) | à valider |
 | 2026-11-10 | `champs_zones` : grandes parcelles partagées entre les zones qu'elles touchent, doublons du fichier national comptés une fois | à valider |
@@ -180,3 +170,4 @@ une partie de l'amont reste hors de la zone.
 | 2026-11-23 | Eau : ajout de `eau_zones.parquet` (indices par zone hydrographique), seule base eau sur la release ; stations et indices Hub'Eau demandés à l'API, `stations_zones` calculé en mémoire | à valider |
 | 2026-11-23 | Eau : suppression de `eau.parquet` (département × année) ; l'eau n'est plus agrégée qu'à la zone hydrographique, `base_finale` croise pesticides et champs | à valider |
 | 2026-11-23 | Eau : `eau_zones` et `base_zones` passent à une ligne par zone et par année (clé `code_zone`, `annee`) ; plusieurs mesures d'une station la même année sont moyennées | à valider |
+| 2026-11-24 | RPG 2023 seul (2013 abandonné) ; `champs.parquet` supprimé, remplacé par `parcelles_rpg_2023.parquet` (sans la Corse) | à valider |

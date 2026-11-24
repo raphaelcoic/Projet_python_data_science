@@ -1,9 +1,12 @@
-"""Données agricoles : parcelles du RPG, lues dans les archives publiées par l'IGN.
+"""Données agricoles : parcelles du RPG 2023, lues dans l'archive nationale publiée par l'IGN.
 
-Fonctions : téléchargement des archives (telecharger_archive_ign ; recuperer_rpg_ign pour 2023,
-recuperer_rpg_2013_ign pour les 13 archives régionales de 2013), lecture des parcelles 2023 par paquets
-(lire_parcelles_rpg), tables à la parcelle avec leur département, sans les contours
-(tabuler_parcelles_rpg pour 2023, tabuler_ilots_rpg_2013 pour 2013).
+Chaîne de la table à la parcelle (parcelles_rpg_2023.parquet), dans l'ordre :
+téléchargement de l'archive (recuperer_rpg_ign), lecture par paquets (lire_parcelles_rpg),
+département de chaque parcelle (src/geo/rattacher_departements.py), retrait des doublons et des
+surfaces nulles (nettoyer_parcelles_rpg), libellés (ajouter_libelles_rpg) ; construire_parcelles_rpg
+enchaîne ces étapes.
+L'agrégation des parcelles aux zones hydrographiques, avec leurs contours, est dans
+src/nettoyage/agreger_champs_zones.py.
 Les référentiels (groupes, catégories, nomenclature des cultures) sont dans constantes_rpg.py.
 
 Règle : un fichier = une fonction, nommé comme la fonction.

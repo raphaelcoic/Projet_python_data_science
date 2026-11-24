@@ -12,7 +12,5 @@ Quand vous ajoutez un notebook, ajoutez une ligne ici.
 | [`tf_selection_molecules_eau.ipynb`](exploration/tf_selection_molecules_eau.ipynb) | Tomia | Sélection bibliographique indépendante (réduction de variables : 511 → 10 molécules clés) des pesticides les plus impactants pour la qualité de l'eau |
 | [`tf_correspondance_groupes_molecules.ipynb`](exploration/tf_correspondance_groupes_molecules.ipynb) | Tomia | Table de correspondance simple entre les 23 `libelle_groupe` du RPG et les 10 molécules clés sélectionnées pour la qualité de l'eau |
 | [`tf_rpg_exploration_2023.ipynb`](exploration/tf_rpg_exploration_2023.ipynb) | Tomia | RPG 2023 : surfaces par catégorie, groupe et culture, profils régionaux, cartes par département |
-| [`tf_rpg_valeurs_manquantes_corse.ipynb`](exploration/tf_rpg_valeurs_manquantes_corse.ipynb) | Tomia | RPG 2013 et 2023 : surfaces sans catégorie et groupe « divers », en particulier en Corse |
-| [`tf_rpg_variation_2013_2023.ipynb`](exploration/tf_rpg_variation_2013_2023.ipynb) | Tomia | RPG : évolution des surfaces entre 2013 et 2023, choix de 2023 comme année de référence |
 
-Les notebooks RPG lisent les archives du RPG publiées par l'IGN (2013 et 2023), via `src/agriculture/`.
+Les notebooks RPG lisent l'archive nationale du RPG 2023 publiée par l'IGN, via `src/agriculture/`.

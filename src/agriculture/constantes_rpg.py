@@ -46,16 +46,6 @@ CATEGORIES_CULTURE: dict[str, str] = {
     "SB": "Surfaces boisées",
 }
 
-# Correspondance Groupe de cultures -> Grande catégorie de culture (TA, PP, CP, NA)
-GROUPE_VERS_CATEGORIE: dict[str, str] = {
-    "1": "TA", "2": "TA", "3": "TA", "4": "TA", "5": "TA",
-    "6": "TA", "7": "TA", "8": "TA", "9": "TA", "10": "TA",
-    "11": "TA", "12": "TA", "13": "TA", "14": "TA", "15": "TA",
-    "16": "TA", "17": "PP", "18": "PP", "19": "TA",
-    "20": "CP", "21": "CP", "22": "CP", "23": "CP",
-    "24": "TA", "25": "TA", "26": "CP", "27": "CP", "28": "NA",
-}
-
 # Correspondance exacte Code culture (3 lettres) -> Grande catégorie de culture (issue du RPG 2025 + PAC)
 CULTURE_VERS_CATEGORIE: dict[str, str] = {
     "AAR": "TA", "ACA": "TA", "ACP": "CP", "AFG": "TA", "AGR": "CP", "AIL": "TA",

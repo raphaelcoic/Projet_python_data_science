@@ -1,7 +1,8 @@
 import pandas as pd
 
-from src.agriculture.constantes_rpg import CATEGORIES_CULTURE, CULTURE_VERS_CATEGORIE, LIBELLES_GROUPES_RPG
+from src.agriculture.ajouter_libelles_rpg import ajouter_libelles_rpg
 from src.agriculture.lire_parcelles_rpg import lire_parcelles_rpg
+from src.agriculture.nettoyer_parcelles_rpg import nettoyer_parcelles_rpg
 from src.geo.rattacher_departements import rattacher_departements
 
 COLONNES = [
@@ -10,13 +11,13 @@ COLONNES = [
 ]
 
 
-def tabuler_parcelles_rpg(chemin_rpg, departements):
-    """Une ligne par parcelle du RPG 2023, avec son département, sans les contours.
+def construire_parcelles_rpg(chemin_rpg, departements):
+    """Construit parcelles_rpg_2023.parquet : une ligne par parcelle du RPG 2023, sans les contours.
 
     chemin_rpg : GeoPackage des parcelles renvoyé par recuperer_rpg_ign.
-    departements : GeoDataFrame renvoyé par recuperer_departements (avec_corse=True pour garder la Corse).
-    categorie_culture vaut TA, PP, CP ou SB d'après le code culture, et reste vide pour les
-    surfaces non agricoles ou non classées.
+    departements : GeoDataFrame renvoyé par recuperer_departements (94 départements, sans la Corse).
+    Lit les parcelles par paquets, donne à chacune son département (celles de Corse sont
+    écartées), puis nettoie la table et ajoute les libellés.
     Renvoie un DataFrame avec les colonnes de COLONNES.
     """
     paquets = [
@@ -27,7 +28,4 @@ def tabuler_parcelles_rpg(chemin_rpg, departements):
         "ID_PARCEL": "id_parcelle", "SURF_PARC": "surface_ha",
         "CODE_CULTU": "code_culture", "CODE_GROUP": "code_groupe",
     })
-    parcelles["libelle_groupe"] = parcelles["code_groupe"].map(LIBELLES_GROUPES_RPG)
-    categorie = parcelles["code_culture"].map(CULTURE_VERS_CATEGORIE)
-    parcelles["categorie_culture"] = categorie.where(categorie.isin(list(CATEGORIES_CULTURE)))
-    return parcelles[COLONNES]
+    return ajouter_libelles_rpg(nettoyer_parcelles_rpg(parcelles))[COLONNES]
