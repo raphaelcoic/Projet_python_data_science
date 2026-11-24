@@ -1,5 +1,4 @@
-import requests
-import pandas as pd
+from src.hubeau.interroger_hubeau import interroger_hubeau
 
 URL = "https://hubeau.eaufrance.fr/api/v1/hydrobio/indices"
 CODES_INDICES = "7613,5856,7036"  # I2M2 (invertébrés), IBD (diatomées), IPR (poissons)
@@ -24,7 +23,4 @@ def recuperer_indices(code_dep):
         "size": TAILLE_MAX,
         "fields": FIELDS,
     }
-    reponse = requests.get(URL, params=params)
-    while not reponse.ok:  # l'API renvoie parfois une erreur 503 qui passe quand on relance
-        reponse = requests.get(URL, params=params)
-    return pd.DataFrame(reponse.json()["data"]).drop(columns="geometry")  # geometry est renvoyée même hors de fields
+    return interroger_hubeau(URL, params)

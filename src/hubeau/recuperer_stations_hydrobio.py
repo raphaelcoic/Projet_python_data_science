@@ -1,5 +1,4 @@
-import requests
-import pandas as pd
+from src.hubeau.interroger_hubeau import interroger_hubeau
 
 URL = "https://hubeau.eaufrance.fr/api/v1/hydrobio/stations_hydrobio"
 FIELDS = "code_station_hydrobio,libelle_station_hydrobio,libelle_cours_eau,longitude,latitude"
@@ -17,11 +16,7 @@ def recuperer_stations_hydrobio(code_dep):
         "size": TAILLE_MAX,
         "fields": FIELDS,
     }
-    reponse = requests.get(URL, params=params)
-    while not reponse.ok:  # l'API renvoie parfois une erreur 503 qui passe quand on relance
-        reponse = requests.get(URL, params=params)
-    stations = pd.DataFrame(reponse.json()["data"]).drop(columns="geometry")  # geometry est renvoyée même hors de fields
-    return stations.rename(columns={
+    return interroger_hubeau(URL, params).rename(columns={
         "code_station_hydrobio": "code_station",
         "libelle_station_hydrobio": "libelle_station",
         "libelle_cours_eau": "nom_cours_eau",
