@@ -8,8 +8,7 @@ Projet Python pour la data science (ENSAE).
 
 | Données | Source |
 |---|---|
-| Indices biologiques des cours d'eau (I2M2, IBD, IPR) | [Hub'Eau – Hydrobiologie](https://hubeau.eaufrance.fr/page/api-hydrobiologie) |
-| Stations hydrobiologiques (coordonnées) | [Hub'Eau – Hydrobiologie](https://hubeau.eaufrance.fr/page/api-hydrobiologie) |
+| Indices biologiques des cours d'eau (I2M2, IBD, IPR), avec les coordonnées des stations | [Hub'Eau – Hydrobiologie](https://hubeau.eaufrance.fr/page/api-hydrobiologie) |
 | Zones hydrographiques | [BD TOPAGE](https://www.sandre.eaufrance.fr/atlas/srv/fre/catalog.search#/home) (Sandre), via son WFS |
 | Achats de produits phytosanitaires par département | [CSV data.gouv.fr](https://www.data.gouv.fr/api/1/datasets/r/6f664bd4-f27d-4e33-8ca7-c197c6adf217) (BNV-D, quantités en kg) |
 | Parcelles agricoles | [RPG](https://www.data.gouv.fr/datasets/rpg) (IGN / ASP), archive nationale 2023 de l'IGN |
@@ -26,7 +25,7 @@ Projet Python pour la data science (ENSAE).
 │   ├── pesticides/             #   achats des 10 molécules par département → pesticides.parquet
 │   ├── zones_hydrographiques/  #   croisement : parcelles, cultures et pesticides par zone hydrographique, puis fusion avec l'eau → base_finale.parquet
 │   ├── visualisation/          #   statistiques descriptives, graphiques et cartes
-│   └── telecharger_donnee.py   #   récupère un fichier déjà calculé depuis la release
+│   └── recuperer_release.py    #   lit dans la release un fichier qui prend plus de 5 minutes à calculer
 ├── notebooks/
 │   ├── README.md           #   index des notebooks (qui, quoi)
 │   └── exploration/        #   brouillons perso (un par personne / sujet)
@@ -57,39 +56,48 @@ Python 3.9 ou plus récent.
 pip install -r requirements.txt
 ```
 
-## Récupérer les données déjà calculées
+## Données : calculées ou lues dans la release
 
-Les fichiers de `main.ipynb` sont sur la release [`donnees-v1`](https://github.com/raphaelcoic/Projet_python_data_science/releases/tag/donnees-v1). Pour la partie eau, seule la table finale `eau_zones_hydro.parquet` (indices agrégés par zone hydrographique) y est : les stations et les indices sont demandés directement à l'API Hub'Eau. Pour le croisement, seuls `parcelles_zones_hydro.parquet` (environ 25 minutes de calcul) et `base_finale.parquet` y sont : les cultures et les pesticides par zone se recalculent en quelques secondes. Chaque fichier de la release passe par `telecharger_donnee(chemin, creer)`, qui suit cet ordre :
+`main.ipynb` recalcule tout à partir des sources. Seule exception : un fichier qui prend **plus de 5 minutes** à calculer est déposé à la main dans la release [`donnees-v1`](https://github.com/raphaelcoic/Projet_python_data_science/releases/tag/donnees-v1), puis lu avec `recuperer_release(nom)`, qui le télécharge dans `data/processed/` s'il n'y est pas déjà.
 
-1. Si le fichier existe en local, il est utilisé.
-2. Sinon, il est téléchargé depuis la release, sans compte GitHub.
-3. S'il n'est pas non plus dans la release, il est créé avec `creer()`, puis déposé dans la release avec `gh`. Il faut avoir les droits d'écriture sur le dépôt.
+Ce sont aujourd'hui les deux tables tirées de l'archive du RPG 2023 de l'IGN (2,75 Go, environ 15 minutes de téléchargement) :
+
+| Fichier | Calcul |
+|---|---|
+| `parcelles_rpg_2023.parquet` (104 Mo) | `construire_parcelles_rpg(recuperer_rpg_ign(), recuperer_departements())` |
+| `parcelles_zones_hydro.parquet` (76 Mo) | `associer_parcelles_zones_hydro(recuperer_rpg_ign(), zones_hydro)`, environ 25 minutes en plus de l'archive |
+
+La release contient aussi `parcelles_rpg_2023_91.gpkg` (10 Mo) : les contours des parcelles de l'Essonne, tirés de l'archive par `extraire_contours_departement(recuperer_rpg_ign(), parcelles, departements, "91")`. La partie 3.1 de `main.ipynb` y rejoue `associer_parcelles_zones_hydro` en une seconde et vérifie que le résultat est identique à `parcelles_zones_hydro.parquet`.
+
+Tout le reste prend moins de 2 minutes (mesures du 2026-11-24) : les indices Hub'Eau environ 1 min 15 (8 départements à la fois), les zones hydrographiques 20 s, le CSV des pesticides 3 s, chaque agrégation par zone une dizaine de secondes.
+
+L'archive elle-même n'est pas dans la release : elle dépasse la limite de 2 Go par fichier de GitHub, et l'IGN l'héberge déjà. `recuperer_rpg_ign()` la télécharge dans `data/raw/rpg_ign/`.
+
+Si le code qui produit un fichier de la release change, on le recalcule puis on remplace sa copie dans la release (droits d'écriture sur le dépôt) :
 
 ```python
-from src.telecharger_donnee import telecharger_donnee
-
-zones_hydro = gpd.read_parquet(telecharger_donnee("data/geo/zones_hydro.parquet", recuperer_zones_hydro))
-eau_zones_hydro = pd.read_parquet(telecharger_donnee("data/processed/eau_zones_hydro.parquet", lambda: construire_eau_zones_hydro(zones_hydro)))
-parcelles_zones_hydro = pd.read_parquet(telecharger_donnee("data/processed/parcelles_zones_hydro.parquet", lambda: associer_parcelles_zones_hydro(recuperer_rpg_ign(), zones_hydro)))
+associer_parcelles_zones_hydro(recuperer_rpg_ign(), zones_hydro).to_parquet("data/processed/parcelles_zones_hydro.parquet", index=False)
 ```
 
-L'archive du RPG de l'IGN (2,75 Go) n'est pas dans la release : elle dépasse la limite de 2 Go par fichier de GitHub, et l'IGN l'héberge déjà. `recuperer_rpg_ign()` la télécharge dans `data/raw/rpg_ign/`. La table à la parcelle qui en est tirée, sans les contours (`parcelles_rpg_2023.parquet`), est dans la release.
-
-Les noms de fichiers doivent être uniques dans la release. Si le code qui produit un fichier change, passez `recalculer=True` : le fichier est recréé, puis remplace sa copie locale et sa copie dans la release.
+```bash
+gh release upload donnees-v1 data/processed/parcelles_zones_hydro.parquet --clobber
+```
 
 ## Régénérer les données
 
 | Partie | Commande | Produit |
 |---|---|---|
-| Eau | `recuperer_toutes_stations_hydrobio()`, `recuperer_tous_indices()` (API Hub'Eau, plusieurs minutes) | en mémoire |
-| Champs | `construire_parcelles_rpg(recuperer_rpg_ign(), recuperer_departements())` (archive RPG 2023 de l'IGN, 2,75 Go ; une ligne par parcelle, pour lier aux ventes de molécules) | `data/processed/parcelles_rpg_2023.parquet` |
+| Eau | `recuperer_tous_indices()` (API Hub'Eau, environ 1 min 15 ; donne aussi les coordonnées des stations) | en mémoire (`indices_bruts`, `stations`) |
+| | `nettoyer_indices(indices_bruts)` | en mémoire (`indices`) |
+| Champs | `construire_parcelles_rpg(recuperer_rpg_ign(), recuperer_departements())` (archive RPG 2023 de l'IGN, 2,75 Go ; une ligne par parcelle, pour lier aux ventes de molécules) | `data/processed/parcelles_rpg_2023.parquet` (release) |
 | Pesticides | `preparer_pesticides()` (télécharge le CSV dans `data/raw/`, garde les 10 molécules) | `data/processed/pesticides.parquet` |
-| Zones | `recuperer_zones_hydro()` | `data/geo/zones_hydro.parquet` |
-| | `rattacher_stations_zones_hydro(stations, zones_hydro)` | en mémoire (`stations_zones_hydro`) |
-| | `construire_eau_zones_hydro(zones_hydro)` : appelle l'API, nettoie, rattache aux zones et agrège (seul fichier eau de la release) | `data/processed/eau_zones_hydro.parquet` |
-| | `associer_parcelles_zones_hydro(recuperer_rpg_ign(), zones_hydro)` (archive RPG 2023 de l'IGN, environ 25 min) | `data/processed/parcelles_zones_hydro.parquet` |
+| Zones | `recuperer_zones_hydro()` | en mémoire (`zones_hydro`) |
+| | `rattacher_stations_zones_hydro(stations_suivies, zones_hydro)` | en mémoire (`stations_zones_hydro`) |
+| | `agreger_eau_zones_hydro(indices, stations_zones_hydro)` | `data/processed/eau_zones_hydro.parquet` |
+| | `associer_parcelles_zones_hydro(recuperer_rpg_ign(), zones_hydro)` (archive RPG 2023 de l'IGN, environ 25 min) | `data/processed/parcelles_zones_hydro.parquet` (release) |
 | | `agreger_champs_zones_hydro(parcelles, parcelles_zones_hydro)` (quelques secondes) | en mémoire (`champs_zones_hydro`) |
-| | `agreger_pesticides_zones_hydro(calculer_doses_pesticides_groupes(parcelles, pesticides), parcelles, parcelles_zones_hydro)` (quelques secondes) | en mémoire (`pesticides_zones_hydro`) |
+| | `calculer_doses_pesticides_groupes(parcelles, pesticides)` | en mémoire (`doses`) |
+| | `agreger_pesticides_zones_hydro(doses, parcelles, parcelles_zones_hydro)` (quelques secondes) | en mémoire (`pesticides_zones_hydro`) |
 | | `fusionner_eau_cultures_pesticides(eau_zones_hydro, champs_zones_hydro, pesticides_zones_hydro, zones_hydro)` | `data/processed/base_finale.parquet` |
 
 ## Règles de travail en groupe
@@ -99,7 +107,7 @@ Les noms de fichiers doivent être uniques dans la release. Si le code qui produ
 - **Chemins** : le code utilise des chemins relatifs à la racine du dépôt (`data/...`). Les notebooks de `notebooks/exploration/` commencent donc par une cellule qui se place à la racine (`os.chdir`) ; les scripts se lancent depuis la racine avec `python -m src.dossier.fichier`.
 - **`main.ipynb`** : une seule personne l'édite à la fois (prévenez le groupe).
 - **Branches** : une branche par tâche (ex. `hubeau-pagination`), puis une pull request vers `main`.
-- **Données** : jamais commitées. Tout doit pouvoir être re-téléchargé par le code ; la release ne sert que de raccourci.
+- **Données** : jamais commitées. Tout doit pouvoir être recalculé par le code ; la release ne garde que les fichiers qui prennent plus de 5 minutes à calculer.
 - Avant de commit un notebook, vider les sorties lourdes (*Kernel → Restart & Clear Output*) si possible.
 
 ## Répartition

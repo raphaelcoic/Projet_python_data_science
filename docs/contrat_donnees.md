@@ -12,7 +12,7 @@ Toute modification du contrat se décide **à trois** et se note en bas de page.
 | Territoire | France métropolitaine continentale : **94 départements, hors Corse** (`2A`, `2B`) et hors DROM |
 | Période | **2013 – 2023** (achats de pesticides disponibles sur 2013-2023 ; le RPG 2023 sert pour toutes les années) |
 | Format | Parquet, dans `data/processed/` |
-| Partage | les fichiers sont lus avec `telecharger_donnee(chemin, creer)` (local, sinon release `donnees-v1`, sinon créé puis déposé ; `recalculer=True` pour le régénérer). Pour l'eau, seul `eau_zones_hydro.parquet` est dans la release ; les stations et indices Hub'Eau sont demandés à l'API. Pour le croisement, seuls `parcelles_zones_hydro.parquet` et `base_finale.parquet` y sont ; `champs_zones_hydro` et `pesticides_zones_hydro` sont calculés en mémoire |
+| Partage | tout est recalculé par le code dans `main.ipynb`. Seuls les fichiers qui prennent plus de 5 minutes à calculer sont dans la release `donnees-v1`, lus avec `recuperer_release(nom)` : `parcelles_rpg_2023.parquet` et `parcelles_zones_hydro.parquet` (tirés de l'archive RPG de l'IGN). Les indices Hub'Eau, avec les coordonnées des stations, sont demandés à l'API (environ 1 min 15) |
 | Noms de colonnes | `snake_case`, sans accents, unité en suffixe (`_kg`, `_ha`, `_ugl`) |
 | `code_dep` | **texte** sur 2 caractères : `"01"`, `"75"` (jamais `1`) |
 | `annee` | entier (`int`) |
@@ -63,6 +63,7 @@ de l'IGN (`RPG_2-2__GPKG_LAMB93_FXX_2023-01-01`) : chaque parcelle va au départ
 un point de sa surface ; les parcelles de Corse sont écartées. Le nettoyage
 (`nettoyer_parcelles_rpg.py`) retire les doublons d'identifiant (aucun en 2023) et les parcelles
 de surface nulle (environ 8 500 miettes de moins de 0,005 ha).
+Dans la release (le calcul demande l'archive de 2,75 Go), lu avec `recuperer_release`.
 
 ### B — Pesticides : `data/processed/pesticides.parquet`
 
@@ -99,7 +100,7 @@ Table des doses (`calculer_doses_pesticides_groupes`) — clé : `code_dep`, `an
 ## 5. Croisement eau × cultures par zone hydrographique
 
 Le département mélange des bassins très différents. Pour croiser l'eau et les cultures,
-on passe donc par les 6 190 zones hydrographiques de la BD TOPAGE (`data/geo/zones_hydro.parquet`).
+on passe donc par les 6 190 zones hydrographiques de la BD TOPAGE (`recuperer_zones_hydro`).
 Les pesticides, achetés au département, passent par les doses de la partie 4 et par la part de chaque parcelle dans chaque zone.
 
 ### `stations_zones_hydro` (en mémoire, pas de fichier)
@@ -110,7 +111,7 @@ Chaque station va dans la zone qui la contient, ou dans la plus proche si elle e
 ### `data/processed/eau_zones_hydro.parquet`
 
 Clé : `code_zone`, `annee`. Une ligne par zone et par année où au moins une station de la zone a un indice.
-**Seule base de la partie eau déposée sur la release.**
+Recalculé dans `main.ipynb` à partir de l'API Hub'Eau (pas dans la release).
 
 | Colonne | Type | Description |
 |---|---|---|
@@ -147,6 +148,7 @@ Clé : `id_parcelle`, `code_zone`. Une ligne par parcelle du RPG 2023 et par zon
 | `part` | float | part de la parcelle dans la zone : 1 si elle n'en touche qu'une, sinon aire du morceau / aire de la parcelle ; les parts d'une parcelle font 1 |
 
 Produit par `src/zones_hydrographiques/associer_parcelles_zones_hydro.py` à partir des contours de l'archive IGN.
+Dans la release (environ 25 minutes de calcul en plus de l'archive), lu avec `recuperer_release`. La release contient aussi les contours des parcelles de l'Essonne (`parcelles_rpg_2023_91.gpkg`, couche `PARCELLES_GRAPHIQUES`, colonne `ID_PARCEL`), pour rejouer ce calcul sur un département dans `main.ipynb`.
 
 ### `pesticides_zones_hydro` (en mémoire, pas de fichier)
 
@@ -205,3 +207,4 @@ Aucun.
 | 2026-11-24 | Pesticides : `pesticides.parquet` décrit tel qu'il est produit (achats par département, 10 molécules, colonnes `code_dep`, `nom_dep`, `quantite_kg`) ; `base_finale` retiré (jamais produit), remplacé par la table des doses ; maille commune = zone hydrographique × année | à valider |
 | 2026-11-24 | `champs_zones` calculé à partir de `parcelles_zones` ; `pesticides_zones` à partir des doses par département × groupe (plus de fichiers par parcelle) | à valider |
 | 2026-11-24 | Noms : suffixe `_zones` remplacé par `_zones_hydro` (`eau_zones_hydro`, `parcelles_zones_hydro`, `champs_zones_hydro`, `pesticides_zones_hydro`, `stations_zones_hydro`) ; `base_zones` renommé `base_finale` ; `champs_zones_hydro` et `pesticides_zones_hydro` calculés en mémoire, plus déposés sur la release | à valider |
+| 2026-11-24 | Release réduite aux fichiers de plus de 5 minutes de calcul (`parcelles_rpg_2023`, `parcelles_zones_hydro`), lus avec `recuperer_release` ; `telecharger_donnee` supprimée. Hub'Eau : coordonnées des stations tirées de l'API des indices (plus d'appel aux stations), 8 départements à la fois | à valider |
