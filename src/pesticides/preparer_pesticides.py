@@ -33,7 +33,12 @@ VARIANTES_CUIVRE = [
 
 
 def preparer_pesticides(actualiser=False):
-    """Télécharge les données brutes, les nettoie et enregistre le résultat."""
+    """Télécharge les données brutes, les nettoie et enregistre le résultat.
+
+    actualiser : True pour retélécharger le CSV même s'il est déjà dans data/raw/.
+    Renvoie un DataFrame (geocode_departement, libelle_departement, annee, substance,
+    quantite_totale en kg), aussi enregistré dans data/processed/pesticides.parquet.
+    """
 
     # 1. Récupérer les données brutes (télécharge si absent ou si actualiser=True)
     chemin_csv = recuperer_pesticides(actualiser=actualiser)

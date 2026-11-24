@@ -21,7 +21,7 @@ def associer_parcelles_zones(chemin_rpg, zones):
     """Associe chaque parcelle du RPG 2023 à la ou aux zones hydrographiques qu'elle touche.
 
     chemin_rpg : GeoPackage des parcelles renvoyé par recuperer_rpg_ign.
-    zones : GeoDataFrame renvoyé par recuperer_zones_hydro (sans la Corse).
+    zones : GeoDataFrame renvoyé par recuperer_zones_hydro, sans les zones de Corse (main.ipynb les retire).
     Une parcelle qui touche une seule zone y va entière (part = 1). Une parcelle qui en touche
     plusieurs est coupée par leurs limites : part = aire du morceau dans la zone / aire de la
     parcelle, les parts d'une parcelle font 1. Les parcelles hors des zones sont écartées.

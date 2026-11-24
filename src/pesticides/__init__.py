@@ -1,7 +1,7 @@
 """Récupération des achats de produits phytosanitaires par département.
 
-Fonctions attendues : téléchargement du fichier dans data/raw/, lecture
-(codes département en texte) et agrégation vers pesticides.parquet.
+Fonctions : téléchargement du CSV dans data/raw/ (recuperer_pesticides), puis nettoyage
+et agrégation des 10 molécules retenues vers pesticides.parquet (preparer_pesticides).
 
 Règle : un fichier = une fonction, nommé comme la fonction.
 """
