@@ -8,9 +8,9 @@ Toute modification du contrat se décide **à trois** et se note en bas de page.
 
 | Règle | Valeur |
 |---|---|
-| Maille | **département × année** |
+| Maille | **zone hydrographique × année** pour le croisement final (`base_zones`) ; les achats de pesticides sont au **département × année** |
 | Territoire | France métropolitaine continentale : **94 départements, hors Corse** (`2A`, `2B`) et hors DROM |
-| Période | **2013 – 2023** (achats de pesticides disponibles sur 2013-2023, millésimes RPG 2013 et 2023) |
+| Période | **2013 – 2023** (achats de pesticides disponibles sur 2013-2023 ; le RPG 2023 sert pour toutes les années) |
 | Format | Parquet, dans `data/processed/` |
 | Partage | les fichiers sont lus avec `telecharger_donnee(chemin, creer)` (local, sinon release `donnees-v1`, sinon créé puis déposé ; `recalculer=True` pour le régénérer). Pour l'eau, seul `eau_zones.parquet` est dans la release ; les stations et indices Hub'Eau sont demandés à l'API |
 | Noms de colonnes | `snake_case`, sans accents, unité en suffixe (`_kg`, `_ha`, `_ugl`) |
@@ -34,8 +34,8 @@ Attention : le réseau de suivi I2M2 double en 2015 (environ 2 300 indices par a
 | IBD | 5856 | diatomées | élevé = bonne qualité |
 | IPR | 7036 | poissons | **bas** = bonne qualité |
 
-L'ancienne liste `data/reference/molecules.csv` est supprimée : la jointure avec les
-pesticides se fait sur `code_dep` × `annee` (quantités totales), plus par molécule.
+L'ancienne liste `data/reference/molecules.csv` est supprimée : les pesticides suivis sont
+les 10 molécules de la partie 3.B, attribuées aux zones hydrographiques (partie 5).
 
 Nettoyage : ne garder que les indices qualifiés « corrects » (`code_qualification == "1"`)
 et retirer la valeur codée `999` de l'IPR (`src/hubeau/nettoyer_indices.py`).
@@ -66,37 +66,41 @@ de surface nulle (environ 8 500 miettes de moins de 0,005 ha).
 
 ### B — Pesticides : `data/processed/pesticides.parquet`
 
-Clé : `code_dep`, `annee`, `cas`
+Clé : `code_dep`, `annee`, `substance`. Une ligne par département, année et molécule, pour les
+**10 molécules suivies** (`MOLECULES`, dans `src/agregation/parcelles_pesticides/constantes_agregation.py`).
 
 | Colonne | Type | Description |
 |---|---|---|
-| `code_dep` | str | département de l'acheteur |
+| `code_dep`, `nom_dep` | str | département de l'acheteur |
 | `annee` | int | année d'achat |
-| `cas` | str | numéro CAS de la substance |
-| `substance` | str | nom de la substance |
-| `quantite_kg` | float | quantité de substance active achetée, en kg |
+| `substance` | str | nom de la molécule (`cuivre` regroupe les 8 sels de cuivre de la BNV-D) |
+| `quantite_kg` | float | quantité de substance active achetée, en kg (produits de biocontrôle et autres additionnés) |
 
-Points d'attention : utiliser les **achats par code postal de l'acheteur**
-(plus proche du lieu d'usage que les ventes, localisées chez le distributeur),
-puis passer du code postal au département. Piège : les codes postaux `20xxx`
-correspondent à la Corse, **à exclure** (hors périmètre), pas à un département `"20"`.
-Garder **toutes** les substances (utile pour les totaux), pas seulement la liste de référence.
+Source : achats de produits phytosanitaires de la BNV-D **par département de l'acheteur**
+(data.gouv.fr). Les valeurs du fichier sont en kg, même si sa description parle de tonnes.
+Construit par `src/pesticides/preparer_pesticides.py`, qui retire la Corse (`2A`, `2B`) et les DROM.
 
-## 4. Jointure : `data/processed/base_finale.parquet`
+## 4. Pesticides attribués aux cultures (en mémoire, pas de fichier)
 
-Réalisée dans `src/nettoyage/` une fois les deux livrables prêts.
+Les achats d'une molécule dans un département sont répartis entre les groupes de cultures qui
+l'utilisent (`MOLECULES_PAR_GROUPE`), au prorata de leur surface dans le département (RPG 2023
+pour toutes les années). Détail du calcul : `src/agregation/parcelles_pesticides/README.md`.
 
-- `pesticides` sommé par département et année (`quantite_kg` totale) via `code_dep`, `annee`
-- × surfaces par groupe de cultures, sommées par département à partir de `parcelles_rpg_2023`, via `code_dep` seulement (RPG 2023 pour toutes les années)
+Table des doses (`calculer_doses_pesticides_groupes`) — clé : `code_dep`, `annee`, `libelle_groupe`, `molecule`.
 
-Contrôles obligatoires : nombre de lignes avant / après chaque `merge`,
-et départements présents d'un côté mais pas de l'autre (`indicator=True`).
+| Colonne | Type | Description |
+|---|---|---|
+| `code_dep` | str | département |
+| `annee` | int | année d'achat |
+| `libelle_groupe` | str | groupe de cultures qui utilise la molécule |
+| `molecule` | str | une des 10 molécules |
+| `dose_kg_ha` | float | kg de la molécule attribués à chaque hectare du groupe dans le département (0 si le département n'a aucune surface qui l'utilise) |
 
 ## 5. Croisement eau × cultures par zone hydrographique
 
 Le département mélange des bassins très différents. Pour croiser l'eau et les cultures,
 on passe donc par les 6 190 zones hydrographiques de la BD TOPAGE (`data/geo/zones_hydro.parquet`).
-Le croisement avec les pesticides, au département, part de `parcelles_rpg_2023.parquet`.
+Les pesticides, achetés au département, passent par les doses de la partie 4 et par la part de chaque parcelle dans chaque zone.
 
 ### `stations_zones` (en mémoire, pas de fichier)
 
@@ -128,10 +132,9 @@ Clé : `code_zone`, `code_groupe_culture`
 | `libelle_groupe_culture` | str | libellé du groupe |
 | `surface_ha` | float | surface du groupe dans la zone, en hectares |
 
-Parcelles : archive nationale du RPG 2023 de l'IGN (`RPG_2-2__GPKG_LAMB93_FXX_2023-01-01`),
-avec le contour de chaque parcelle. Une parcelle qui touche une seule
-zone y va entière ; une parcelle qui en touche plusieurs est coupée selon leurs limites, et sa
-surface déclarée est répartie au prorata de chaque morceau.
+Produit par `src/nettoyage/agreger_champs_zones.py` à partir de `parcelles_zones` et de
+`parcelles_rpg_2023` : chaque parcelle compte dans chaque zone qu'elle touche pour sa part de
+surface déclarée.
 
 ### `data/processed/parcelles_zones.parquet`
 
@@ -155,8 +158,9 @@ Clé : `code_zone`, `annee`. Quantités des 10 molécules attribuées à la zone
 | `annee` | int | année d'achat |
 | `glyphosate_kg`, … | float | somme, sur les parcelles de la zone, de la quantité attribuée à la parcelle × sa part dans la zone |
 
-Produit par `src/nettoyage/agreger_pesticides_zones.py` à partir des fichiers
-`parcelles_pesticides_<annee>.parquet` de Tomia (`src/agregation/parcelles_pesticides/`) et de `parcelles_zones`.
+Produit par `src/nettoyage/agreger_pesticides_zones.py` : les doses de la partie 4 multipliées par la
+surface de chaque groupe de cultures de chaque département dans la zone (`parcelles_zones` × `parcelles_rpg_2023`),
+ce qui revient à sommer la quantité de chaque parcelle × sa part dans la zone.
 
 ### `data/processed/base_zones.parquet`
 
@@ -167,7 +171,7 @@ Clé : `code_zone`, `annee`. Une ligne par ligne de `eau_zones.parquet` ; les pa
 | `code_zone`, `nom_zone` | str | zone hydrographique |
 | `annee`, `I2M2`, `IBD`, `IPR`, `nb_stations` | | repris de `eau_zones.parquet` |
 | `surface_zone_ha` | float | surface de la zone, en hectares |
-| `part_agricole` | float | part de la zone en parcelles du RPG, en % |
+| `part_agricole` | float | part de la zone en parcelles du RPG, en % (peut dépasser 100 % de quelques dixièmes sur le littoral, où des parcelles débordent du contour de la zone) |
 | `part_groupe_1`, … | float | part de la zone occupée par chaque groupe de cultures, en % |
 | `glyphosate_kg_ha`, … | float | pesticides attribués à la zone l'année de l'indice, en kg par hectare de zone (0 si la zone n'a pas de parcelle) |
 
@@ -176,8 +180,7 @@ une partie de l'amont reste hors de la zone.
 
 ## 6. Points ouverts (à décider à trois)
 
-- **Pesticides** : la source utilisée (achats par département, colonne `valeur`) n'est pas
-  celle prévue (achats BNV-D par code postal, en kg, avec `cas`) ; unité et clé à fixer.
+Aucun.
 
 ## Historique des modifications
 
@@ -198,3 +201,5 @@ une partie de l'amont reste hors de la zone.
 | 2026-11-23 | Eau : `eau_zones` et `base_zones` passent à une ligne par zone et par année (clé `code_zone`, `annee`) ; plusieurs mesures d'une station la même année sont moyennées | à valider |
 | 2026-11-24 | RPG 2023 seul (2013 abandonné) ; `champs.parquet` supprimé, remplacé par `parcelles_rpg_2023.parquet` (sans la Corse) | à valider |
 | 2026-11-24 | Pesticides par zone : `parcelles_zones` et `pesticides_zones` ; `base_zones` gagne les 10 molécules en kg/ha de zone | à valider |
+| 2026-11-24 | Pesticides : `pesticides.parquet` décrit tel qu'il est produit (achats par département, 10 molécules, colonnes `code_dep`, `nom_dep`, `quantite_kg`) ; `base_finale` retiré (jamais produit), remplacé par la table des doses ; maille commune = zone hydrographique × année | à valider |
+| 2026-11-24 | `champs_zones` calculé à partir de `parcelles_zones` ; `pesticides_zones` à partir des doses par département × groupe (plus de fichiers par parcelle) | à valider |
