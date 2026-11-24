@@ -8,15 +8,24 @@ from src.agregation.parcelles_pesticides.constantes_agregation import (
     CHEMIN_CORRESPONDANCE_DEFAUT,
     MOLECULES,
 )
+from src.agregation.parcelles_pesticides.creer_correspondance_groupes_molecules import (
+    creer_correspondance_groupes_molecules,
+)
 
 
-def charger_matrice_correspondance(chemin=CHEMIN_CORRESPONDANCE_DEFAUT):
+def charger_matrice_correspondance(chemin=CHEMIN_CORRESPONDANCE_DEFAUT, actualiser=True):
     """Construit la matrice binaire (libelle_groupe × molécules) depuis le CSV de correspondance.
+
+    Appelle ``creer_correspondance_groupes_molecules`` pour générer (ou régénérer si
+    ``actualiser=True``) le fichier CSV à partir de la table codée en dur.
 
     Paramètres
     ----------
     chemin : str ou Path
         Chemin vers ``correspondance_groupes_molecules.csv``.
+    actualiser : bool
+        Si ``True`` (défaut) ou si le fichier n'existe pas encore, appelle
+        ``creer_correspondance_groupes_molecules(chemin)`` avant la lecture.
 
     Renvoie
     -------
@@ -25,7 +34,11 @@ def charger_matrice_correspondance(chemin=CHEMIN_CORRESPONDANCE_DEFAUT):
         (une par molécule dans l'ordre de ``MOLECULES``) et des valeurs entières
         ``0`` ou ``1``.
     """
-    df = pd.read_csv(Path(chemin))
+    chemin = Path(chemin)
+    if actualiser or not chemin.exists():
+        creer_correspondance_groupes_molecules(chemin)
+
+    df = pd.read_csv(chemin)
 
     if "libelle_groupe" not in df.columns or "molecules_utilisees" not in df.columns:
         raise ValueError(

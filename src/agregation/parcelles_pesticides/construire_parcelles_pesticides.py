@@ -21,6 +21,9 @@ from src.agregation.parcelles_pesticides.constantes_agregation import (
 from src.agregation.parcelles_pesticides.construire_parcelles_pesticides_annee import (
     construire_parcelles_pesticides_annee,
 )
+from src.agregation.parcelles_pesticides.creer_correspondance_groupes_molecules import (
+    creer_correspondance_groupes_molecules,
+)
 
 
 def construire_parcelles_pesticides(
@@ -50,7 +53,11 @@ def construire_parcelles_pesticides(
     """
     t0 = time.time()
 
-    print("1/3 — Calcul des doses par (code_dep, annee, libelle_groupe)...")
+    print("1/4 — Génération de la table de correspondance groupes × molécules...")
+    chemin_correspondance = creer_correspondance_groupes_molecules(chemin_correspondance)
+    print(f"    Fichier de correspondance enregistré : {chemin_correspondance}")
+
+    print("2/4 — Calcul des doses par (code_dep, annee, libelle_groupe)...")
     doses, non_alloue = calculer_doses_pesticides_groupes(
         chemin_parcelles=chemin_parcelles,
         chemin_pesticides=chemin_pesticides,
@@ -90,7 +97,7 @@ def construire_parcelles_pesticides(
         else sorted(int(a) for a in annees)
     )
 
-    print(f"2/3 — Génération des tables parcellaires annuelles ({len(annees_cibles)} années)...")
+    print(f"3/4 — Génération des tables parcellaires annuelles ({len(annees_cibles)} années)...")
     bilans = []
     for annee in annees_cibles:
         t_an = time.time()
@@ -129,7 +136,7 @@ def construire_parcelles_pesticides(
     df_bilan = pd.DataFrame(bilans)
     duree_totale = time.time() - t0
     print(
-        f"3/3 — Terminé en {duree_totale:.1f} s : {len(df_bilan)} fichiers générés dans "
+        f"4/4 — Terminé en {duree_totale:.1f} s : {len(df_bilan)} fichiers générés dans "
         f"{dossier_sortie} ({df_bilan['taille_mo'].sum():.1f} Mo au total)."
     )
     return df_bilan

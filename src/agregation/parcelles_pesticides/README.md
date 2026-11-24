@@ -15,14 +15,14 @@ Toutes les commandes ci-dessous s'exécutent **depuis la racine du dépôt**.
 ```text
 1. Parcelles RPG 2023        ──► data/processed/parcelles_rpg_2023.parquet
 2. Achats de pesticides      ──► data/raw/...csv ──► data/processed/pesticides.parquet
-3. Correspondance cultures   ──► data/processed/correspondance_groupes_molecules.csv
         │
         ▼
-4. Pipeline d'agrégation (src/agregation/parcelles_pesticides/) :
-   a. charger_matrice_correspondance.py       (matrice binaire 23 × 10)
-   b. calculer_doses_pesticides_groupes.py    ──► data/processed/doses_pesticides_groupes.parquet
-   c. construire_parcelles_pesticides_annee.py (appelé pour chaque année par l'orchestrateur)
-   d. construire_parcelles_pesticides.py      ──► data/processed/parcelles_pesticides/parcelles_pesticides_<annee>.parquet
+3. Pipeline d'agrégation (src/agregation/parcelles_pesticides/) :
+   a. creer_correspondance_groupes_molecules.py ──► data/processed/correspondance_groupes_molecules.csv
+   b. charger_matrice_correspondance.py         (matrice binaire 23 × 10)
+   c. calculer_doses_pesticides_groupes.py      ──► data/processed/doses_pesticides_groupes.parquet
+   d. construire_parcelles_pesticides_annee.py  (appelé pour chaque année par l'orchestrateur)
+   e. construire_parcelles_pesticides.py        ──► data/processed/parcelles_pesticides/parcelles_pesticides_<annee>.parquet
 ```
 
 ### Exécution pas à pas (de zéro)
@@ -41,14 +41,12 @@ Appelle `src/pesticides/recuperer_pesticides.py` (CSV brut dans `data/raw/`) pui
 python -c "from src.pesticides.preparer_pesticides import preparer_pesticides; preparer_pesticides()"
 ```
 
-#### Étape 3 — Vérifier la présence de la table de correspondance
-Le fichier `data/processed/correspondance_groupes_molecules.csv` est produit par le notebook `notebooks/exploration/tf_correspondance_groupes_molecules.ipynb`. S'il est absent, exécuter ce notebook au préalable.
-
-#### Étape 4 — Lancer l'agrégation parcelles × pesticides (génère les 11 tables Parquet annuelles)
+#### Étape 3 — Lancer l'agrégation parcelles × pesticides (génère la correspondance et les 11 tables Parquet annuelles)
 L'orchestrateur `construire_parcelles_pesticides.py` exécute automatiquement dans l'ordre :
-1. `charger_matrice_correspondance.py`
-2. `calculer_doses_pesticides_groupes.py` → produit `data/processed/doses_pesticides_groupes.parquet`
-3. `construire_parcelles_pesticides_annee.py` pour chaque année → produit `data/processed/parcelles_pesticides/parcelles_pesticides_<annee>.parquet`
+1. `creer_correspondance_groupes_molecules.py` → produit `data/processed/correspondance_groupes_molecules.csv` à partir de la table codée en dur (le notebook `notebooks/exploration/tf_correspondance_groupes_molecules.ipynb` reste disponible pour la documentation et la visualisation)
+2. `charger_matrice_correspondance.py` → charge la matrice binaire `23 × 10`
+3. `calculer_doses_pesticides_groupes.py` → produit `data/processed/doses_pesticides_groupes.parquet`
+4. `construire_parcelles_pesticides_annee.py` pour chaque année → produit `data/processed/parcelles_pesticides/parcelles_pesticides_<annee>.parquet`
 
 ```bash
 # Générer toutes les années (2013 à 2023)
@@ -56,6 +54,9 @@ python -m src.agregation.parcelles_pesticides.construire_parcelles_pesticides
 
 # Ou générer uniquement certaines années (ex. 2022 et 2023)
 python -m src.agregation.parcelles_pesticides.construire_parcelles_pesticides --annees 2022 2023
+
+# (Optionnel) Générer uniquement le CSV de correspondance
+python -m src.agregation.parcelles_pesticides.creer_correspondance_groupes_molecules
 ```
 
 ### Lecture d'une table annuelle en Python
@@ -149,10 +150,11 @@ Le produit cartésien complet représente $9\,742\,907 \times 11 = 107\,171\,977
 | Ordre | Fichier | Rôle |
 |---|---|---|
 | 0 | `constantes_agregation.py` | Chemins par défaut, colonnes conservées et mapping des 10 colonnes `*_kg`. |
-| 1 | `charger_matrice_correspondance.py` | Parse `correspondance_groupes_molecules.csv` en matrice binaire `23 × 10`. |
-| 2 | `calculer_doses_pesticides_groupes.py` | Agrège les surfaces $S_{d,g}$ par lots, calcule les doses $D_{d,t,m,g}$ et journalise les quantités non allouables. |
-| 3 | `construire_parcelles_pesticides_annee.py` | Génère un fichier annuel `parcelles_pesticides_<annee>.parquet` en streaming et calcule les métriques de contrôle qualité. |
-| 4 | `construire_parcelles_pesticides.py` | Orchestrateur complet (CLI + fonction Python) qui enchaîne les étapes 1 → 3 pour toutes les années demandées et vérifie la conservation de masse. |
+| 1 | `creer_correspondance_groupes_molecules.py` | Crée `data/processed/correspondance_groupes_molecules.csv` à partir de la table codée en dur (23 groupes × 10 molécules). |
+| 2 | `charger_matrice_correspondance.py` | Appelle `creer_correspondance_groupes_molecules` puis parse le CSV en matrice binaire `23 × 10`. |
+| 3 | `calculer_doses_pesticides_groupes.py` | Agrège les surfaces $S_{d,g}$ par lots, calcule les doses $D_{d,t,m,g}$ et journalise les quantités non allouables. |
+| 4 | `construire_parcelles_pesticides_annee.py` | Génère un fichier annuel `parcelles_pesticides_<annee>.parquet` en streaming et calcule les métriques de contrôle qualité. |
+| 5 | `construire_parcelles_pesticides.py` | Orchestrateur complet (CLI + fonction Python) qui enchaîne les étapes 1 → 4 pour toutes les années demandées et vérifie la conservation de masse. |
 
 ---
 
