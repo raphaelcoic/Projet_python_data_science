@@ -1,14 +1,15 @@
-def tracer_carte(zones, valeurs, colonne, titre, ax, cmap="Blues", centrer=False):
-    """Carte des zones hydrographiques colorées selon une colonne (par défaut bleu clair = faible, foncé = élevé).
+def tracer_carte(contours, valeurs, colonne, titre, ax, cmap="Blues", centrer=False, cle="code_zone"):
+    """Carte colorée selon une colonne (par défaut bleu clair = faible, foncé = élevé).
 
-    zones : GeoDataFrame avec code_zone et geometry.
-    valeurs : DataFrame avec code_zone et la colonne à représenter.
+    contours : GeoDataFrame avec la clé et geometry (zones hydrographiques ou départements).
+    valeurs : DataFrame avec la clé et la colonne à représenter.
     cmap : palette ("Blues_r" pour inverser : foncé = faible ; "RdBu" pour un taux d'évolution).
     centrer : True pour une échelle symétrique autour de 0 (taux d'évolution).
+    cle : colonne de jointure, "code_zone" ou "code_dep".
     L'échelle va du 2e au 98e centile, pour que quelques valeurs extrêmes ne l'écrasent pas.
-    Les zones sans valeur sont en gris.
+    Les contours sans valeur sont en gris.
     """
-    carte = zones.merge(valeurs, on="code_zone", how="left")
+    carte = contours.merge(valeurs, on=cle, how="left")
     vmin, vmax = carte[colonne].quantile(0.02), carte[colonne].quantile(0.98)
     if centrer:
         vmax = max(-vmin, vmax)
