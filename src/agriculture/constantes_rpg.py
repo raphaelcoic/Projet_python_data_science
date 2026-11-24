@@ -1,8 +1,11 @@
 """
-Libellés des 28 groupes de cultures du RPG (champ CODE_GROUP de l'archive IGN).
+Référentiels du RPG : groupes de cultures, catégories et nomenclature des cultures.
 
 Source : https://www.data.gouv.fr/datasets/rpg (IGN / ASP).
 """
+
+# Nomenclature officielle des cultures 2023 (code culture -> libellé), publiée par l'IGN
+URL_NOMENCLATURE_CULTURES_2023 = "https://data.geopf.fr/annexes/ressources/documentation/REF_CULTURES_GROUPES_CULTURES_2023.csv"
 
 LIBELLES_GROUPES_RPG: dict[str, str] = {
     "1": "Blé tendre",
@@ -33,4 +36,57 @@ LIBELLES_GROUPES_RPG: dict[str, str] = {
     "26": "Canne à sucre",
     "27": "Arboriculture",
     "28": "Divers",
+}
+
+# Libellés des grandes catégories de culture
+CATEGORIES_CULTURE: dict[str, str] = {
+    "TA": "Terres arables",
+    "PP": "Prairies permanentes",
+    "CP": "Cultures permanentes",
+    "SB": "Surfaces boisées",
+}
+
+# Correspondance Groupe de cultures -> Grande catégorie de culture (TA, PP, CP, NA)
+GROUPE_VERS_CATEGORIE: dict[str, str] = {
+    "1": "TA", "2": "TA", "3": "TA", "4": "TA", "5": "TA",
+    "6": "TA", "7": "TA", "8": "TA", "9": "TA", "10": "TA",
+    "11": "TA", "12": "TA", "13": "TA", "14": "TA", "15": "TA",
+    "16": "TA", "17": "PP", "18": "PP", "19": "TA",
+    "20": "CP", "21": "CP", "22": "CP", "23": "CP",
+    "24": "TA", "25": "TA", "26": "CP", "27": "CP", "28": "NA",
+}
+
+# Correspondance exacte Code culture (3 lettres) -> Grande catégorie de culture (issue du RPG 2025 + PAC)
+CULTURE_VERS_CATEGORIE: dict[str, str] = {
+    "AAR": "TA", "ACA": "TA", "ACP": "CP", "AFG": "TA", "AGR": "CP", "AIL": "TA",
+    "AME": "TA", "ANA": "TA", "ARA": "TA", "ARP": "CP", "ART": "TA", "AVH": "TA",
+    "AVO": "CP", "AVP": "TA", "BCA": "CP", "BCF": "CP", "BCI": "CP", "BCP": "CP",
+    "BCR": "CP", "BDH": "TA", "BDP": "TA", "BDT": "TA", "BEA": "CP", "BEF": "CP",
+    "BEI": "CP", "BEP": "CP", "BER": "CP", "BFP": "TA", "BFS": "NA", "BOR": "NA",
+    "BOP": "PP", "BTA": "NA", "BTH": "TA", "BTN": "TA", "BTP": "TA", "BVF": "TA",
+    "CAB": "CP", "CAC": "CP", "CAE": "PP", "CAF": "TA", "CAG": "TA", "CAH": "TA",
+    "CAR": "TA", "CBT": "CP", "CCN": "TA", "CEE": "PP", "CEL": "TA", "CHU": "TA",
+    "CHV": "TA", "CML": "TA", "CPL": "TA", "CSA": "CP", "CSF": "CP", "CSI": "CP",
+    "CSP": "CP", "CSR": "CP", "CSS": "NA", "CTG": "CP", "CZH": "TA", "CZP": "TA",
+    "EPE": "TA", "EPI": "TA", "FEV": "TA", "FLA": "TA", "FLP": "CP", "FNU": "TA",
+    "FRA": "TA", "FVL": "TA", "FVP": "TA", "GES": "TA", "GRA": "TA", "HBL": "CP",
+    "HPC": "TA", "J5M": "TA", "J6P": "TA", "J6S": "TA", "JAC": "TA", "JNO": "TA",
+    "LAV": "CP", "LBF": "TA", "LDH": "TA", "LDP": "TA", "LEC": "TA", "LIF": "TA",
+    "LIH": "TA", "LIP": "TA", "LOT": "TA", "LUZ": "TA", "MCR": "TA", "MCS": "TA",
+    "MCT": "CP", "MDI": "TA", "MID": "TA", "MIE": "TA", "MIS": "TA", "MLC": "TA",
+    "MLF": "TA", "MLG": "TA", "MLO": "TA", "MLS": "TA", "MLT": "TA", "MOH": "TA",
+    "MOT": "TA", "MPA": "TA", "MPC": "TA", "MRS": "NA", "MSW": "CP", "NOS": "CP",
+    "NOX": "CP", "NVT": "TA", "NYG": "TA", "OAG": "TA", "OEI": "TA", "OHR": "TA",
+    "OIG": "TA", "OLI": "CP", "ORH": "TA", "ORP": "TA", "PAG": "TA", "PCH": "TA",
+    "PCL": "TA", "PEP": "CP", "PEV": "CP", "PFR": "CP", "PHF": "TA", "PHI": "TA",
+    "PHS": "TA", "PIS": "CP", "PME": "CP", "POR": "TA", "POT": "TA", "PPH": "PP",
+    "PPP": "CP", "PPR": "TA", "PRF": "CP", "PRL": "PP", "PRU": "CP", "PSL": "TA",
+    "PTC": "TA", "PTR": "TA", "PVP": "TA", "PVT": "CP", "PWT": "CP", "RDI": "TA",
+    "RGA": "TA", "RIZ": "TA", "ROS": "CP", "RVI": "CP", "SAG": "NA", "SAI": "TA",
+    "SBO": "SB", "SGH": "TA", "SGP": "TA", "SHD": "CP", "SIN": "NA", "SNA": "NA",
+    "SNE": "NA", "SNU": "NA", "SOG": "TA", "SOJ": "TA", "SPH": "PP", "SPL": "PP",
+    "SRS": "TA", "TAB": "TA", "TBT": "TA", "TCR": "CP", "TOM": "TA", "TRE": "TA",
+    "TRN": "TA", "TRU": "CP", "TTH": "TA", "TTP": "TA", "VES": "TA", "VET": "CP",
+    "VGD": "CP", "VNL": "CP", "VRC": "CP", "VRG": "CP", "VRN": "CP", "VRT": "CP",
+    "ZZZ": "NA",
 }

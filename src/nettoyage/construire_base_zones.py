@@ -1,5 +1,5 @@
 def construire_base_zones(eau_zones, champs_zones, zones):
-    """Croise les indices biologiques et les cultures : une ligne par zone hydrographique suivie.
+    """Croise les indices biologiques et les cultures : une ligne par zone hydrographique suivie et par année.
 
     eau_zones : DataFrame renvoyé par agreger_eau_zones.
     champs_zones : DataFrame renvoyé par agreger_champs_zones.

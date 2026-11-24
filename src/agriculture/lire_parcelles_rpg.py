@@ -1,23 +1,28 @@
+import sqlite3
+
 import pyogrio
 
 TAILLE_PAQUET = 500_000
 
 
-def lire_parcelles_rpg(chemin_rpg):
-    """Lit les parcelles du RPG par paquets de 500 000, pour limiter la mémoire.
+def lire_parcelles_rpg(chemin_rpg, colonnes=("CODE_GROUP", "SURF_PARC")):
+    """Lit les parcelles du RPG 2023 par paquets de 500 000, pour limiter la mémoire.
 
     chemin_rpg : GeoPackage des parcelles renvoyé par recuperer_rpg_ign.
-    Renvoie, paquet par paquet, des GeoDataFrame avec CODE_GROUP (groupe de cultures),
-    SURF_PARC (surface déclarée en hectares) et geometry (Lambert 93, EPSG:2154).
+    colonnes : colonnes à lire parmi ID_PARCEL (identifiant), CODE_CULTU (code culture),
+    CODE_GROUP (groupe de cultures) et SURF_PARC (surface déclarée en hectares).
+    Les paquets sont lus par plage d'identifiants (rowid), bien plus vite qu'en sautant des lignes.
+    Renvoie, paquet par paquet, des GeoDataFrame avec ces colonnes et geometry (Lambert 93, EPSG:2154).
     """
-    nb_parcelles = pyogrio.read_info(chemin_rpg)["features"]
-    for debut in range(0, nb_parcelles, TAILLE_PAQUET):
+    with sqlite3.connect(f"file:{chemin_rpg}?mode=ro", uri=True) as connexion:
+        dernier = connexion.execute("SELECT max(rowid) FROM PARCELLES_GRAPHIQUES").fetchone()[0]
+    for debut in range(0, dernier, TAILLE_PAQUET):
         parcelles = pyogrio.read_dataframe(
             chemin_rpg,
-            columns=["CODE_GROUP", "SURF_PARC"],
-            skip_features=debut,
-            max_features=TAILLE_PAQUET,
+            columns=list(colonnes),
+            where=f"rowid > {debut} AND rowid <= {debut + TAILLE_PAQUET}",
             use_arrow=True,
         )
-        parcelles["SURF_PARC"] = parcelles["SURF_PARC"].astype("float64")
+        if "SURF_PARC" in parcelles:
+            parcelles["SURF_PARC"] = parcelles["SURF_PARC"].astype("float64")
         yield parcelles
