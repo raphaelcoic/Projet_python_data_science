@@ -20,7 +20,7 @@ Projet Python pour la data science (ENSAE).
 ```
 ├── main.ipynb              # Notebook FINAL : raconte l'analyse, appelle les fonctions de src/
 ├── src/                    # Code réutilisable : un fichier = une fonction
-│   ├── hubeau/             #   API Hub'Eau (stations, indices biologiques) et indices agrégés par zone
+│   ├── hubeau/             #   partie eau, de l'API Hub'Eau à eau_zones.parquet (nettoyage, rattachement aux zones, agrégation)
 │   ├── pesticides/         #   achats de pesticides
 │   ├── agriculture/        #   parcelles agricoles du RPG (archive IGN) ; constantes_rpg.py = libellés des cultures
 │   ├── geo/                #   périmètre (94 départements, hors Corse) et fonds de carte
@@ -60,7 +60,7 @@ Les fichiers de `main.ipynb` sont sur la release [`donnees-v1`](https://github.c
 from src.telecharger_donnee import telecharger_donnee
 
 zones = gpd.read_parquet(telecharger_donnee("data/geo/zones_hydro.parquet", recuperer_zones_hydro))
-eau_zones = pd.read_parquet(telecharger_donnee("data/processed/eau_zones.parquet", lambda: agreger_eau_zones(indices_propres, stations_zones)))
+eau_zones = pd.read_parquet(telecharger_donnee("data/processed/eau_zones.parquet", lambda: construire_eau_zones(zones)))
 champs_zones = pd.read_parquet(telecharger_donnee("data/processed/champs_zones.parquet", lambda: agreger_champs_zones(recuperer_rpg_ign(), zones), recalculer=True))  # régénère
 ```
 
@@ -80,7 +80,7 @@ Les noms de fichiers doivent être uniques dans la release. Si le code qui produ
 | Zones | `recuperer_zones_hydro()` | `data/geo/zones_hydro.parquet` |
 | | `rattacher_stations_zones(stations, zones)` | en mémoire (`stations_zones`) |
 | | `agreger_champs_zones(recuperer_rpg_ign(), zones)` (archive RPG 2023 de l'IGN, 2,75 Go, environ 30 min) | `data/processed/champs_zones.parquet` |
-| | `agreger_eau_zones(indices, stations_zones)` (seul fichier eau de la release) | `data/processed/eau_zones.parquet` |
+| | `construire_eau_zones(zones)` : appelle l'API, nettoie, rattache aux zones et agrège (seul fichier eau de la release) | `data/processed/eau_zones.parquet` |
 | | `construire_base_zones(eau_zones, champs_zones, zones)` | `data/processed/base_zones.parquet` |
 
 ## Règles de travail en groupe

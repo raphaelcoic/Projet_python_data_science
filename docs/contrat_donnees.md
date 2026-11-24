@@ -38,7 +38,7 @@ L'ancienne liste `data/reference/molecules.csv` est supprimée : la jointure ave
 pesticides se fait sur `code_dep` × `annee` (quantités totales), plus par molécule.
 
 Nettoyage : ne garder que les indices qualifiés « corrects » (`code_qualification == "1"`)
-et retirer la valeur codée `999` de l'IPR (`src/nettoyage/nettoyer_indices.py`).
+et retirer la valeur codée `999` de l'IPR (`src/hubeau/nettoyer_indices.py`).
 L'eau n'a pas de livrable au département : elle est agrégée à la zone hydrographique (`eau_zones.parquet`, partie 5).
 
 ## 3. Livrables
@@ -59,6 +59,20 @@ Produit par `src/nettoyage/agreger_champs.py` à partir de `data/processed/parce
 une ligne par parcelle de l'archive nationale du RPG 2023 de l'IGN (`RPG_2-2__GPKG_LAMB93_FXX_2023-01-01`),
 construite par `src/agriculture/tabuler_parcelles_rpg.py` : chaque parcelle va au département qui contient
 un point de sa surface. On somme ensuite la surface déclarée par département et groupe de cultures.
+
+#### Table intermédiaire : `data/processed/parcelles_rpg_2023.parquet`
+
+Clé : `id_parcelle`. Une ligne par parcelle, Corse comprise, sans les contours. Sert aussi à
+lier les parcelles aux ventes de molécules.
+
+| Colonne | Type | Description |
+|---|---|---|
+| `id_parcelle` | str | identifiant de la parcelle dans le RPG (`ID_PARCEL`) |
+| `code_dep`, `nom_dep` | str | département de la parcelle |
+| `surface_ha` | float | surface déclarée, en hectares |
+| `code_culture` | str | code culture RPG (3 lettres) |
+| `code_groupe`, `libelle_groupe` | str | groupe de cultures RPG (`"1"` à `"28"`) et son libellé |
+| `categorie_culture` | str | `TA`, `PP`, `CP` ou `SB`, vide pour les surfaces non agricoles |
 
 ### B — Pesticides : `data/processed/pesticides.parquet`
 
@@ -101,14 +115,15 @@ Chaque station va dans la zone qui la contient, ou dans la plus proche si elle e
 
 ### `data/processed/eau_zones.parquet`
 
-Clé : `code_zone`. Une ligne par zone ayant au moins une station avec un indice.
+Clé : `code_zone`, `annee`. Une ligne par zone et par année où au moins une station de la zone a un indice.
 **Seule base de la partie eau déposée sur la release.**
 
 | Colonne | Type | Description |
 |---|---|---|
 | `code_zone` | str | code de la zone hydrographique |
-| `I2M2`, `IBD`, `IPR` | float | médiane des médianes 2013-2023 des stations de la zone |
-| `nb_stations` | int | nombre de stations de la zone ayant un indice |
+| `annee` | int | année des prélèvements (2013 à 2023) |
+| `I2M2`, `IBD`, `IPR` | float | médiane, sur les stations de la zone, de la moyenne des mesures de chaque station dans l'année |
+| `nb_stations` | int | nombre de stations de la zone ayant un indice cette année-là |
 
 Produit par `src/hubeau/agreger_eau_zones.py` à partir des indices nettoyés et de `stations_zones`.
 
@@ -130,12 +145,12 @@ surface déclarée est répartie au prorata de chaque morceau.
 
 ### `data/processed/base_zones.parquet`
 
-Clé : `code_zone`. Une ligne par zone ayant au moins une station avec un indice.
+Clé : `code_zone`, `annee`. Une ligne par ligne de `eau_zones.parquet` ; les parts de cultures (RPG 2023) sont les mêmes pour toutes les années d'une zone.
 
 | Colonne | Type | Description |
 |---|---|---|
 | `code_zone`, `nom_zone` | str | zone hydrographique |
-| `I2M2`, `IBD`, `IPR`, `nb_stations` | | repris de `eau_zones.parquet` |
+| `annee`, `I2M2`, `IBD`, `IPR`, `nb_stations` | | repris de `eau_zones.parquet` |
 | `surface_zone_ha` | float | surface de la zone, en hectares |
 | `part_agricole` | float | part de la zone en parcelles du RPG, en % |
 | `part_groupe_1`, … | float | part de la zone occupée par chaque groupe de cultures, en % |
@@ -164,3 +179,4 @@ une partie de l'amont reste hors de la zone.
 | 2026-11-23 | Champs : abandon du WFS ; `champs.parquet` aussi calculé à partir de l'archive RPG 2023 de l'IGN | à valider |
 | 2026-11-23 | Eau : ajout de `eau_zones.parquet` (indices par zone hydrographique), seule base eau sur la release ; stations et indices Hub'Eau demandés à l'API, `stations_zones` calculé en mémoire | à valider |
 | 2026-11-23 | Eau : suppression de `eau.parquet` (département × année) ; l'eau n'est plus agrégée qu'à la zone hydrographique, `base_finale` croise pesticides et champs | à valider |
+| 2026-11-23 | Eau : `eau_zones` et `base_zones` passent à une ligne par zone et par année (clé `code_zone`, `annee`) ; plusieurs mesures d'une station la même année sont moyennées | à valider |
