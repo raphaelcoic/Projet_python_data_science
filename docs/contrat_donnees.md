@@ -133,6 +133,31 @@ avec le contour de chaque parcelle. Une parcelle qui touche une seule
 zone y va entière ; une parcelle qui en touche plusieurs est coupée selon leurs limites, et sa
 surface déclarée est répartie au prorata de chaque morceau.
 
+### `data/processed/parcelles_zones.parquet`
+
+Clé : `id_parcelle`, `code_zone`. Une ligne par parcelle du RPG 2023 et par zone qu'elle touche.
+
+| Colonne | Type | Description |
+|---|---|---|
+| `id_parcelle` | str | identifiant de la parcelle (même clé que `parcelles_rpg_2023.parquet`) |
+| `code_zone` | str | code de la zone hydrographique |
+| `part` | float | part de la parcelle dans la zone : 1 si elle n'en touche qu'une, sinon aire du morceau / aire de la parcelle ; les parts d'une parcelle font 1 |
+
+Produit par `src/nettoyage/associer_parcelles_zones.py` à partir des contours de l'archive IGN.
+
+### `data/processed/pesticides_zones.parquet`
+
+Clé : `code_zone`, `annee`. Quantités des 10 molécules attribuées à la zone (kg de substance active), 2013 à 2023.
+
+| Colonne | Type | Description |
+|---|---|---|
+| `code_zone` | str | code de la zone hydrographique |
+| `annee` | int | année d'achat |
+| `glyphosate_kg`, … | float | somme, sur les parcelles de la zone, de la quantité attribuée à la parcelle × sa part dans la zone |
+
+Produit par `src/nettoyage/agreger_pesticides_zones.py` à partir des fichiers
+`parcelles_pesticides_<annee>.parquet` de Tomia (`src/agregation/parcelles_pesticides/`) et de `parcelles_zones`.
+
 ### `data/processed/base_zones.parquet`
 
 Clé : `code_zone`, `annee`. Une ligne par ligne de `eau_zones.parquet` ; les parts de cultures (RPG 2023) sont les mêmes pour toutes les années d'une zone.
@@ -144,6 +169,7 @@ Clé : `code_zone`, `annee`. Une ligne par ligne de `eau_zones.parquet` ; les pa
 | `surface_zone_ha` | float | surface de la zone, en hectares |
 | `part_agricole` | float | part de la zone en parcelles du RPG, en % |
 | `part_groupe_1`, … | float | part de la zone occupée par chaque groupe de cultures, en % |
+| `glyphosate_kg_ha`, … | float | pesticides attribués à la zone l'année de l'indice, en kg par hectare de zone (0 si la zone n'a pas de parcelle) |
 
 Limite : la zone ne couvre que le bassin local. Pour une station sur un grand cours d'eau,
 une partie de l'amont reste hors de la zone.
@@ -171,3 +197,4 @@ une partie de l'amont reste hors de la zone.
 | 2026-11-23 | Eau : suppression de `eau.parquet` (département × année) ; l'eau n'est plus agrégée qu'à la zone hydrographique, `base_finale` croise pesticides et champs | à valider |
 | 2026-11-23 | Eau : `eau_zones` et `base_zones` passent à une ligne par zone et par année (clé `code_zone`, `annee`) ; plusieurs mesures d'une station la même année sont moyennées | à valider |
 | 2026-11-24 | RPG 2023 seul (2013 abandonné) ; `champs.parquet` supprimé, remplacé par `parcelles_rpg_2023.parquet` (sans la Corse) | à valider |
+| 2026-11-24 | Pesticides par zone : `parcelles_zones` et `pesticides_zones` ; `base_zones` gagne les 10 molécules en kg/ha de zone | à valider |

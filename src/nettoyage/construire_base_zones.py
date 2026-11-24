@@ -1,8 +1,9 @@
-def construire_base_zones(eau_zones, champs_zones, zones):
-    """Croise les indices biologiques et les cultures : une ligne par zone hydrographique suivie et par année.
+def construire_base_zones(eau_zones, champs_zones, pesticides_zones, zones):
+    """Croise les indices biologiques, les cultures et les pesticides : une ligne par zone hydrographique suivie et par année.
 
     eau_zones : DataFrame renvoyé par agreger_eau_zones.
     champs_zones : DataFrame renvoyé par agreger_champs_zones.
+    pesticides_zones : DataFrame renvoyé par agreger_pesticides_zones.
     zones : GeoDataFrame renvoyé par recuperer_zones_hydro.
     Renvoie un DataFrame avec les colonnes de base_zones.parquet.
     """
@@ -18,4 +19,10 @@ def construire_base_zones(eau_zones, champs_zones, zones):
     base[colonnes] = base[colonnes].fillna(0)
     parts = base[colonnes].div(base["surface_zone_ha"], axis=0) * 100
     parts.columns = [c.replace("surface_", "part_") for c in colonnes]
-    return base.drop(columns=colonnes).join(parts)
+    base = base.drop(columns=colonnes).join(parts)
+
+    # pesticides de la zone l'année de l'indice, en kg par hectare de zone ; une zone suivie sans parcelle n'en reçoit pas
+    kg = [c for c in pesticides_zones.columns if c.endswith("_kg")]
+    base = base.merge(pesticides_zones, on=["code_zone", "annee"], how="left")
+    base[kg] = base[kg].fillna(0).div(base["surface_zone_ha"], axis=0)
+    return base.rename(columns={c: f"{c}_ha" for c in kg})

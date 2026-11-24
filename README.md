@@ -79,7 +79,10 @@ Les noms de fichiers doivent être uniques dans la release. Si le code qui produ
 | | `rattacher_stations_zones(stations, zones)` | en mémoire (`stations_zones`) |
 | | `agreger_champs_zones(recuperer_rpg_ign(), zones)` (archive RPG 2023 de l'IGN, 2,75 Go, environ 30 min) | `data/processed/champs_zones.parquet` |
 | | `construire_eau_zones(zones)` : appelle l'API, nettoie, rattache aux zones et agrège (seul fichier eau de la release) | `data/processed/eau_zones.parquet` |
-| | `construire_base_zones(eau_zones, champs_zones, zones)` | `data/processed/base_zones.parquet` |
+| | `associer_parcelles_zones(recuperer_rpg_ign(), zones)` (archive RPG 2023 de l'IGN, environ 25 min) | `data/processed/parcelles_zones.parquet` |
+| | `python -m src.agregation.parcelles_pesticides.construire_parcelles_pesticides` (pesticides par parcelle, de Tomia) | `data/processed/parcelles_pesticides/parcelles_pesticides_<annee>.parquet` |
+| | `agreger_pesticides_zones(parcelles_pesticides, parcelles_zones)`, pour chaque année | `data/processed/pesticides_zones.parquet` |
+| | `construire_base_zones(eau_zones, champs_zones, pesticides_zones, zones)` | `data/processed/base_zones.parquet` |
 
 ## Règles de travail en groupe
 
