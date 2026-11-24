@@ -1,8 +1,8 @@
-from src.hubeau.agreger_eau_zones import agreger_eau_zones
-from src.hubeau.nettoyer_indices import nettoyer_indices
-from src.hubeau.rattacher_stations_zones import rattacher_stations_zones
-from src.hubeau.recuperer_tous_indices import recuperer_tous_indices
-from src.hubeau.recuperer_toutes_stations_hydrobio import recuperer_toutes_stations_hydrobio
+from src.eau.agreger_eau_zones import agreger_eau_zones
+from src.eau.nettoyer_indices import nettoyer_indices
+from src.eau.rattacher_stations_zones import rattacher_stations_zones
+from src.eau.recuperer_tous_indices import recuperer_tous_indices
+from src.eau.recuperer_toutes_stations_hydrobio import recuperer_toutes_stations_hydrobio
 
 
 def construire_eau_zones(zones):

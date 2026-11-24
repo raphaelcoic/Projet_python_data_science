@@ -1,4 +1,4 @@
-def construire_base_zones(eau_zones, champs_zones, pesticides_zones, zones):
+def fusionner_eau_cultures_pesticides(eau_zones, champs_zones, pesticides_zones, zones):
     """Croise les indices biologiques, les cultures et les pesticides : une ligne par zone hydrographique suivie et par année.
 
     eau_zones : DataFrame renvoyé par agreger_eau_zones.

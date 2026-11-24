@@ -1,13 +1,14 @@
 # Achats de pesticides attribués aux cultures (RPG 2023 × BNV-D 2013–2023)
 
-Ce sous-module estime la quantité (en **kg de substance active**) des **10 molécules clés** attribuée à chaque hectare de chaque groupe de cultures du RPG 2023, par département et par année. Il ne contient que deux fichiers :
+On estime la quantité (en **kg de substance active**) des **10 molécules clés** attribuée à chaque hectare de chaque groupe de cultures du RPG 2023, par département et par année.
 
 | Fichier | Rôle |
 |---|---|
-| `constantes_agregation.py` | Les 10 molécules (`MOLECULES`), les noms de colonnes `<molecule>_kg` et les molécules utilisées par chacun des 23 groupes de cultures (`MOLECULES_PAR_GROUPE`) |
-| `calculer_doses_pesticides_groupes.py` | Dose de chaque molécule par hectare des groupes qui l'utilisent, par département et par année |
+| `src/pesticides/constantes_pesticides.py` | Les 10 molécules (`MOLECULES`) et les noms de colonnes `<molecule>_kg` |
+| `src/zones_hydrographiques/constantes_cultures_molecules.py` | Les molécules utilisées par chacun des 23 groupes de cultures (`MOLECULES_PAR_GROUPE`) |
+| `src/zones_hydrographiques/calculer_doses_pesticides_groupes.py` | Dose de chaque molécule par hectare des groupes qui l'utilisent, par département et par année |
 
-`src/nettoyage/agreger_pesticides_zones.py` multiplie ensuite ces doses par la surface de chaque groupe dans chaque zone hydrographique (partie 5.2 de `main.ipynb`) :
+`src/zones_hydrographiques/agreger_pesticides_zones.py` multiplie ensuite ces doses par la surface de chaque groupe dans chaque zone hydrographique (partie 5.2 de `main.ipynb`) :
 
 ```python
 doses = calculer_doses_pesticides_groupes(parcelles, pesticides)   # parcelles_rpg_2023, pesticides.parquet

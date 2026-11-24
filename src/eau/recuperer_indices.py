@@ -1,4 +1,4 @@
-from src.hubeau.interroger_hubeau import interroger_hubeau
+from src.eau.interroger_hubeau import interroger_hubeau
 
 URL = "https://hubeau.eaufrance.fr/api/v1/hydrobio/indices"
 CODES_INDICES = "7613,5856,7036"  # I2M2 (invertébrés), IBD (diatomées), IPR (poissons)

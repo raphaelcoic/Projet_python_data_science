@@ -20,14 +20,13 @@ Projet Python pour la data science (ENSAE).
 ```
 ├── main.ipynb              # Notebook FINAL : raconte l'analyse, appelle les fonctions de src/
 ├── src/                    # Code réutilisable : un fichier = une fonction
-│   ├── hubeau/             #   partie eau, de l'API Hub'Eau à eau_zones.parquet (nettoyage, rattachement aux zones, agrégation)
-│   ├── pesticides/         #   achats de pesticides
-│   ├── agriculture/        #   parcelles agricoles du RPG (archive IGN) ; constantes_rpg.py = libellés des cultures
-│   ├── geo/                #   périmètre (94 départements, hors Corse) et fonds de carte
-│   ├── agregation/         #   les 10 molécules, leurs groupes de cultures et les doses par hectare (voir son README)
-│   ├── nettoyage/          #   nettoyage, agrégation, fusion
-│   ├── visualisation/      #   graphiques et cartes
-│   └── telecharger_donnee.py #  récupère un fichier déjà calculé depuis la release
+│   ├── geo/                    #   périmètre (94 départements, hors Corse), contours des départements et des zones hydrographiques
+│   ├── eau/                    #   indices biologiques : API Hub'Eau → eau_zones.parquet
+│   ├── agriculture/            #   parcelles du RPG 2023 (archive IGN) → parcelles_rpg_2023.parquet ; constantes_rpg.py = libellés des cultures
+│   ├── pesticides/             #   achats des 10 molécules par département → pesticides.parquet
+│   ├── zones_hydrographiques/  #   croisement : parcelles, cultures et pesticides par zone hydrographique, puis fusion avec l'eau → base_zones.parquet
+│   ├── visualisation/          #   statistiques descriptives, graphiques et cartes
+│   └── telecharger_donnee.py   #   récupère un fichier déjà calculé depuis la release
 ├── notebooks/
 │   ├── README.md           #   index des notebooks (qui, quoi)
 │   └── exploration/        #   brouillons perso (un par personne / sujet)
@@ -35,11 +34,20 @@ Projet Python pour la data science (ENSAE).
 │   ├── raw/                #   données brutes téléchargées (non versionné)
 │   ├── processed/          #   livrables du contrat de données (non versionné)
 │   └── geo/                #   shapefiles / fonds de carte (non versionné)
-├── docs/contrat_donnees.md # Format des livrables de chaque partie
+├── docs/
+│   ├── contrat_donnees.md        # format des livrables de chaque partie
+│   └── repartition_pesticides.md # méthode de répartition des achats de pesticides entre les cultures
 └── requirements.txt
 ```
 
-**Le flux :** API / fichiers → `data/raw/` → nettoyage → `data/processed/` → analyse et cartes dans `main.ipynb`.
+**La chaîne :**
+
+1. **Chaque source à part** : `src/eau/` → `eau_zones.parquet`, `src/agriculture/` → `parcelles_rpg_2023.parquet`, `src/pesticides/` → `pesticides.parquet`.
+2. **Croisement dans `src/zones_hydrographiques/`** :
+   - parcelles → zones hydrographiques (`associer_parcelles_zones` → `parcelles_zones.parquet`) → surface de chaque culture par zone (`agreger_champs_zones` → `champs_zones.parquet`) ;
+   - achats répartis entre les cultures qui utilisent chaque molécule (`calculer_doses_pesticides_groupes`) → pesticides par zone (`agreger_pesticides_zones` → `pesticides_zones.parquet`) ;
+   - fusion avec les indices de l'eau (`fusionner_eau_cultures_pesticides` → `base_zones.parquet`).
+3. **Analyse et cartes** dans `main.ipynb`.
 
 ## Installation
 
@@ -82,12 +90,12 @@ Les noms de fichiers doivent être uniques dans la release. Si le code qui produ
 | | `associer_parcelles_zones(recuperer_rpg_ign(), zones)` (archive RPG 2023 de l'IGN, environ 25 min) | `data/processed/parcelles_zones.parquet` |
 | | `agreger_champs_zones(parcelles, parcelles_zones)` (quelques secondes) | `data/processed/champs_zones.parquet` |
 | | `agreger_pesticides_zones(calculer_doses_pesticides_groupes(parcelles, pesticides), parcelles, parcelles_zones)` (quelques secondes) | `data/processed/pesticides_zones.parquet` |
-| | `construire_base_zones(eau_zones, champs_zones, pesticides_zones, zones)` | `data/processed/base_zones.parquet` |
+| | `fusionner_eau_cultures_pesticides(eau_zones, champs_zones, pesticides_zones, zones)` | `data/processed/base_zones.parquet` |
 
 ## Règles de travail en groupe
 
 - **Notebooks d'exploration** : tous dans `notebooks/exploration/`, nommés `initiales_sujet.ipynb` (ex. `rc_hubeau_stations.ipynb`), et listés dans `notebooks/README.md`. Chacun ne modifie que les siens, ce qui évite les conflits git sur les notebooks.
-- **Un fichier = une fonction** : quand un bout de code marche, il devient une fonction dans son propre fichier, nommé comme elle, dans le bon dossier de `src/`. Exemple : la fonction `recuperer_indices` va dans `src/hubeau/recuperer_indices.py` et s'importe avec `from src.hubeau.recuperer_indices import recuperer_indices`.
+- **Un fichier = une fonction** : quand un bout de code marche, il devient une fonction dans son propre fichier, nommé comme elle, dans le bon dossier de `src/`. Exemple : la fonction `recuperer_indices` va dans `src/eau/recuperer_indices.py` et s'importe avec `from src.eau.recuperer_indices import recuperer_indices`.
 - **Chemins** : le code utilise des chemins relatifs à la racine du dépôt (`data/...`). Les notebooks de `notebooks/exploration/` commencent donc par une cellule qui se place à la racine (`os.chdir`) ; les scripts se lancent depuis la racine avec `python -m src.dossier.fichier`.
 - **`main.ipynb`** : une seule personne l'édite à la fois (prévenez le groupe).
 - **Branches** : une branche par tâche (ex. `hubeau-pagination`), puis une pull request vers `main`.
@@ -99,8 +107,8 @@ Les noms de fichiers doivent être uniques dans la release. Si le code qui produ
 | Étape | Membre A — Eau | Membre B — Champs | Membre C — Pesticides |
 |---|---|---|---|
 | Nom | _…_ | _…_ | _…_ |
-| 1. Collecte (en parallèle) | `src/hubeau/` → `eau_zones.parquet` | `src/agriculture/` → `parcelles_rpg_2023.parquet` | `src/pesticides/` → `pesticides.parquet` |
-| 2. Jointure (une personne) | `src/nettoyage/` → `base_zones.parquet` | | |
+| 1. Collecte (en parallèle) | `src/eau/` → `eau_zones.parquet` | `src/agriculture/` → `parcelles_rpg_2023.parquet` | `src/pesticides/` → `pesticides.parquet` |
+| 2. Jointure (une personne) | `src/zones_hydrographiques/` → `base_zones.parquet` | | |
 | 3. Stats descriptives (en parallèle) | qualité de l'eau | surfaces et cultures | achats de pesticides |
 
 Le croisement eau × champs × pesticides se fait à trois, puis une seule personne assemble `main.ipynb`.

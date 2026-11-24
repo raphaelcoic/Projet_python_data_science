@@ -1,4 +1,4 @@
-from src.hubeau.interroger_hubeau import interroger_hubeau
+from src.eau.interroger_hubeau import interroger_hubeau
 
 URL = "https://hubeau.eaufrance.fr/api/v1/hydrobio/stations_hydrobio"
 FIELDS = "code_station_hydrobio,libelle_station_hydrobio,libelle_cours_eau,longitude,latitude"

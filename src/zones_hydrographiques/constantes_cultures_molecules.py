@@ -1,13 +1,4 @@
-"""Les 10 molécules suivies et les groupes de cultures du RPG qui les utilisent."""
-
-MOLECULES = [
-    "glyphosate", "s-metolachlore", "isoproturon", "chlorotoluron",  # herbicides
-    "cuivre", "boscalid", "tebuconazole",  # fongicides
-    "imidaclopride", "cypermethrine", "chlorpyriphos-ethyl",  # insecticides
-]
-
-# Colonnes de quantités, en kg de substance active : glyphosate_kg, s_metolachlore_kg, ...
-LISTE_COLONNES_MOLECULES = [f"{m.replace('-', '_')}_kg" for m in MOLECULES]
+"""Molécules utilisées par chaque groupe de cultures du RPG : sert à répartir les achats de pesticides entre les cultures."""
 
 # Molécules utilisées par chaque groupe de cultures du RPG (usages agricoles 2013-2023), d'après les
 # homologations E-Phy (Anses) et les guides des instituts techniques (Arvalis, Terres Inovia, IFV, CTIFL).

@@ -1,7 +1,7 @@
 import pandas as pd
 
 from src.geo.liste_departements import liste_departements
-from src.hubeau.recuperer_indices import recuperer_indices
+from src.eau.recuperer_indices import recuperer_indices
 
 
 def recuperer_tous_indices():

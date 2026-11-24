@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.agregation.parcelles_pesticides.constantes_agregation import MOLECULES
+from src.pesticides.constantes_pesticides import MOLECULES
 from src.pesticides.recuperer_pesticides import recuperer_pesticides
 
 

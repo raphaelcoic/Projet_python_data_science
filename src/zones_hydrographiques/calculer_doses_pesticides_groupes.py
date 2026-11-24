@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.agregation.parcelles_pesticides.constantes_agregation import MOLECULES_PAR_GROUPE
+from src.zones_hydrographiques.constantes_cultures_molecules import MOLECULES_PAR_GROUPE
 
 
 def calculer_doses_pesticides_groupes(parcelles, pesticides):

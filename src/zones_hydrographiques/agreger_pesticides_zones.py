@@ -1,4 +1,4 @@
-from src.agregation.parcelles_pesticides.constantes_agregation import LISTE_COLONNES_MOLECULES, MOLECULES
+from src.pesticides.constantes_pesticides import LISTE_COLONNES_MOLECULES, MOLECULES
 
 
 def agreger_pesticides_zones(doses, parcelles, parcelles_zones):

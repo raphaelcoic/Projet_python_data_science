@@ -1,7 +1,7 @@
 import pandas as pd
 
 from src.geo.liste_departements import liste_departements
-from src.hubeau.recuperer_stations_hydrobio import recuperer_stations_hydrobio
+from src.eau.recuperer_stations_hydrobio import recuperer_stations_hydrobio
 
 
 def recuperer_toutes_stations_hydrobio():

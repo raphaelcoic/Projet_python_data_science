@@ -38,7 +38,7 @@ L'ancienne liste `data/reference/molecules.csv` est supprimée : les pesticides 
 les 10 molécules de la partie 3.B, attribuées aux zones hydrographiques (partie 5).
 
 Nettoyage : ne garder que les indices qualifiés « corrects » (`code_qualification == "1"`)
-et retirer la valeur codée `999` de l'IPR (`src/hubeau/nettoyer_indices.py`).
+et retirer la valeur codée `999` de l'IPR (`src/eau/nettoyer_indices.py`).
 L'eau n'a pas de livrable au département : elle est agrégée à la zone hydrographique (`eau_zones.parquet`, partie 5).
 
 ## 3. Livrables
@@ -67,7 +67,7 @@ de surface nulle (environ 8 500 miettes de moins de 0,005 ha).
 ### B — Pesticides : `data/processed/pesticides.parquet`
 
 Clé : `code_dep`, `annee`, `substance`. Une ligne par département, année et molécule, pour les
-**10 molécules suivies** (`MOLECULES`, dans `src/agregation/parcelles_pesticides/constantes_agregation.py`).
+**10 molécules suivies** (`MOLECULES`, dans `src/pesticides/constantes_pesticides.py`).
 
 | Colonne | Type | Description |
 |---|---|---|
@@ -84,7 +84,7 @@ Construit par `src/pesticides/preparer_pesticides.py`, qui retire la Corse (`2A`
 
 Les achats d'une molécule dans un département sont répartis entre les groupes de cultures qui
 l'utilisent (`MOLECULES_PAR_GROUPE`), au prorata de leur surface dans le département (RPG 2023
-pour toutes les années). Détail du calcul : `src/agregation/parcelles_pesticides/README.md`.
+pour toutes les années). Détail du calcul : [`docs/repartition_pesticides.md`](repartition_pesticides.md).
 
 Table des doses (`calculer_doses_pesticides_groupes`) — clé : `code_dep`, `annee`, `libelle_groupe`, `molecule`.
 
@@ -119,7 +119,7 @@ Clé : `code_zone`, `annee`. Une ligne par zone et par année où au moins une s
 | `I2M2`, `IBD`, `IPR` | float | médiane, sur les stations de la zone, de la moyenne des mesures de chaque station dans l'année |
 | `nb_stations` | int | nombre de stations de la zone ayant un indice cette année-là |
 
-Produit par `src/hubeau/agreger_eau_zones.py` à partir des indices nettoyés et de `stations_zones`.
+Produit par `src/eau/agreger_eau_zones.py` à partir des indices nettoyés et de `stations_zones`.
 
 ### `data/processed/champs_zones.parquet`
 
@@ -132,7 +132,7 @@ Clé : `code_zone`, `code_groupe_culture`
 | `libelle_groupe_culture` | str | libellé du groupe |
 | `surface_ha` | float | surface du groupe dans la zone, en hectares |
 
-Produit par `src/nettoyage/agreger_champs_zones.py` à partir de `parcelles_zones` et de
+Produit par `src/zones_hydrographiques/agreger_champs_zones.py` à partir de `parcelles_zones` et de
 `parcelles_rpg_2023` : chaque parcelle compte dans chaque zone qu'elle touche pour sa part de
 surface déclarée.
 
@@ -146,7 +146,7 @@ Clé : `id_parcelle`, `code_zone`. Une ligne par parcelle du RPG 2023 et par zon
 | `code_zone` | str | code de la zone hydrographique |
 | `part` | float | part de la parcelle dans la zone : 1 si elle n'en touche qu'une, sinon aire du morceau / aire de la parcelle ; les parts d'une parcelle font 1 |
 
-Produit par `src/nettoyage/associer_parcelles_zones.py` à partir des contours de l'archive IGN.
+Produit par `src/zones_hydrographiques/associer_parcelles_zones.py` à partir des contours de l'archive IGN.
 
 ### `data/processed/pesticides_zones.parquet`
 
@@ -158,13 +158,14 @@ Clé : `code_zone`, `annee`. Quantités des 10 molécules attribuées à la zone
 | `annee` | int | année d'achat |
 | `glyphosate_kg`, … | float | somme, sur les parcelles de la zone, de la quantité attribuée à la parcelle × sa part dans la zone |
 
-Produit par `src/nettoyage/agreger_pesticides_zones.py` : les doses de la partie 4 multipliées par la
+Produit par `src/zones_hydrographiques/agreger_pesticides_zones.py` : les doses de la partie 4 multipliées par la
 surface de chaque groupe de cultures de chaque département dans la zone (`parcelles_zones` × `parcelles_rpg_2023`),
 ce qui revient à sommer la quantité de chaque parcelle × sa part dans la zone.
 
 ### `data/processed/base_zones.parquet`
 
 Clé : `code_zone`, `annee`. Une ligne par ligne de `eau_zones.parquet` ; les parts de cultures (RPG 2023) sont les mêmes pour toutes les années d'une zone.
+Produit par `src/zones_hydrographiques/fusionner_eau_cultures_pesticides.py`, qui fusionne `eau_zones`, `champs_zones` et `pesticides_zones`.
 
 | Colonne | Type | Description |
 |---|---|---|
