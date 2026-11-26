@@ -1,6 +1,6 @@
 # Eau et agriculture : les pesticides laissent-ils une trace dans les rivières ?
 
-Projet Python pour la data science (ENSAE, 2026). Auteurs : _à compléter_.
+Projet Python pour la data science (ENSAE, 2026). Auteurs : COÏC--WULFMAN Raphael, CABORT Sacha, FONTAINE Tomia.
 
 **Problématique :** là où l'on achète le plus de pesticides, les rivières sont-elles en moins bonne santé biologique ? France métropolitaine continentale (94 départements), 2013-2023.
 
