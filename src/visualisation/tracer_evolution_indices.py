@@ -1,19 +1,17 @@
 import matplotlib.pyplot as plt
 
 
-def tracer_evolution_indices(eau_zones_hydro):
+def tracer_evolution_indices(medianes):
     """Trace la médiane nationale de chaque indice par année, un panneau par indice.
 
-    eau_zones_hydro : DataFrame renvoyé par agreger_eau_zones_hydro (une ligne par zone et par année).
-    La médiane nationale d'une année est la médiane des zones suivies cette année-là.
+    medianes : DataFrame indexé par année, avec une colonne par indice (calculer_medianes_zones_constantes).
     L'axe de l'IPR est inversé pour que, sur les trois panneaux, le haut signifie une meilleure qualité.
     """
-    medianes = eau_zones_hydro.groupby("annee")[["I2M2", "IBD", "IPR"]].median()
-    fig, axes = plt.subplots(1, 3, figsize=(12, 3.2))
+    fig, axes = plt.subplots(1, len(medianes.columns), figsize=(12, 3.2))
     for ax, indice in zip(axes, medianes.columns):
-        ax.plot(medianes.index, medianes[indice], color="#2a78d6", linewidth=2)
+        ax.plot(medianes.index, medianes[indice], color="#2a78d6", linewidth=2, marker="o", markersize=3)
         ax.set_title(indice)
-        ax.set_xlabel("annee")
+        ax.set_xlabel("année")
         if indice == "IPR":
             ax.invert_yaxis()
     axes[0].set_ylabel("médiane des zones")

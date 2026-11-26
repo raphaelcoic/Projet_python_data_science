@@ -5,6 +5,7 @@ avec les coordonnées des stations), nettoyer les indices (nettoyer_indices), ra
 à leur zone hydrographique (rattacher_stations_zones_hydro), puis agréger les indices
 à la zone (agreger_eau_zones_hydro). main.ipynb enchaîne ces étapes, une par cellule ;
 l'API est appelée à chaque exécution (environ 1 min 15).
+calculer_medianes_zones_constantes donne la médiane nationale de chaque indice sur les zones suivies chaque année.
 
 Règle : un fichier = une fonction, nommé comme la fonction.
 """

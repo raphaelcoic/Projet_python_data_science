@@ -3,7 +3,7 @@ numpy
 requests
 geopandas
 pyogrio
-matplotlib>=3.9
+matplotlib>=3.10
 seaborn
 pyarrow>=14
 jupyter

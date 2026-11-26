@@ -7,7 +7,6 @@ Dans l'ordre :
   (constantes_cultures_molecules.py, calculer_doses_pesticides_groupes), puis pesticides attribués
   à chaque zone par année (agreger_pesticides_zones_hydro) ;
 - fusion avec les indices de l'eau : table croisée par zone et par année (fusionner_eau_cultures_pesticides).
-Méthode de répartition des pesticides : docs/repartition_pesticides.md.
 
 Règle : un fichier = une fonction, nommé comme la fonction.
 """

@@ -7,7 +7,7 @@ def calculer_doses_pesticides_groupes(parcelles, pesticides):
     """Dose de chaque molécule par hectare de chaque groupe de cultures qui l'utilise, par département et par année.
 
     parcelles : DataFrame de parcelles_rpg_2023.parquet (code_dep, libelle_groupe, surface_ha).
-    pesticides : DataFrame renvoyé par preparer_pesticides (code_dep, annee, substance, quantite_kg).
+    pesticides : DataFrame renvoyé par agreger_pesticides ou preparer_pesticides (code_dep, annee, substance, quantite_kg).
     Les achats d'une molécule dans un département sont répartis entre les groupes qui l'utilisent
     (MOLECULES_PAR_GROUPE), au prorata de leur surface : tous ces groupes ont la même dose,
     achats / surface des groupes utilisateurs du département. Si le département n'en a aucune
