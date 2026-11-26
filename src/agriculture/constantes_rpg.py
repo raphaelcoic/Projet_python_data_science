@@ -46,6 +46,34 @@ CATEGORIES_CULTURE: dict[str, str] = {
     "SB": "Surfaces boisées",
 }
 
+# Regroupement des groupes de cultures du RPG en 8 grandes filières agronomiques
+FILIERES_RPG: dict[str, str] = {
+    "Blé tendre": "Céréales à paille",
+    "Orge": "Céréales à paille",
+    "Autres céréales": "Céréales à paille",
+    "Riz": "Céréales à paille",
+    "Maïs grain et ensilage": "Maïs",
+    "Colza": "Oléagineux & indus.",
+    "Tournesol": "Oléagineux & indus.",
+    "Autres oléagineux": "Oléagineux & indus.",
+    "Protéagineux": "Oléagineux & indus.",
+    "Légumineuses à grains": "Oléagineux & indus.",
+    "Plantes à fibres": "Oléagineux & indus.",
+    "Autres cultures industrielles": "Oléagineux & indus.",
+    "Canne à sucre": "Oléagineux & indus.",
+    "Vignes": "Vignes & vergers",
+    "Vergers": "Vignes & vergers",
+    "Fruits à coque": "Vignes & vergers",
+    "Oliviers": "Vignes & vergers",
+    "Légumes ou fleurs": "Légumes & fleurs",
+    "Prairies permanentes": "Prairies perm. & estives",
+    "Estives et landes": "Prairies perm. & estives",
+    "Prairies temporaires": "Prairies temp. & fourrages",
+    "Fourrage": "Prairies temp. & fourrages",
+    "Gel (surfaces gelées sans production)": "Gel & divers",
+    "Divers": "Gel & divers",
+}
+
 # Correspondance exacte Code culture (3 lettres) -> Grande catégorie de culture (issue du RPG 2025 + PAC)
 CULTURE_VERS_CATEGORIE: dict[str, str] = {
     "AAR": "TA", "ACA": "TA", "ACP": "CP", "AFG": "TA", "AGR": "CP", "AIL": "TA",
